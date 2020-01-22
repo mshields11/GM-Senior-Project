@@ -36,7 +36,7 @@ Mohamad Saab | Abdul Ahmad | John Gettel | Aalem Singh  | CSC4996 | December 11 
 	-sqlalchemy  
 	-pandas_datareader  
 	-stockstats  
-	-statmodels  
+	-statsmodels  
 	-sklearn  
 	-DBEngine
 
