@@ -32,10 +32,13 @@ Mohamad Saab | Abdul Ahmad | John Gettel | Aalem Singh  | CSC4996 | December 11 
 9. Add Python Interpreter
 
 10. Add all dependencies
-	-xgboost
-	-sqlalchemy
-	-pandas_datareader
-	-stockstats
+	-xgboost  
+	-sqlalchemy  
+	-pandas_datareader  
+	-stockstats  
+	-statsmodels  
+	-sklearn  
+	-DBEngine
 
 11. Run DataMain.py in PyCharm
 
