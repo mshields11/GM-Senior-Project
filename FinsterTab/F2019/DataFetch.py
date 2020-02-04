@@ -112,7 +112,7 @@ class DataFetch:
 
     def macroFetch(self):
         data = quandl.get("USMISERY/INDEX", authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31", end_date="2019-12-31")                                   #Fetches data from quandl, stores in a dataframe
-        data.rename(columns={'Date': 'date', 'Uneployment Rate': 'unemployment', 'Inflation Rate': 'inflation', 'Misery Index' : 'misery'}, inplace=True)       #Renames the columns of the dataframe variable storing data from quandl
+        data.rename(columns={'Date': 'date', 'Unemployment Rate': 'unemployment', 'Inflation Rate': 'inflation', 'Misery Index' : 'misery'}, inplace=True)       #Renames the columns of the dataframe variable storing data from quandl
         data = data.reset_index()                                                                                                                               #Resets the index so it is easier to work with
         data.sort_values(by=['Date'])                                                                                                                           #Ensures the values are sorted by date
         data.to_sql('macrovar', self.engine, if_exists=('replace'),                                                                                             #Inserts the data into SQL

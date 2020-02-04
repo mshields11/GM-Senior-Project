@@ -140,5 +140,6 @@ values (1 , 'GM'   , 'Equity' , 'YAHOO'),
 	   (2 , 'PFE'  , 'Equity' , 'YAHOO'),
 	   (3 , 'SPY'  , 'Equity' , 'YAHOO'),
 	   (4 , 'XPH'  , 'Equity' , 'YAHOO'),
-	   (5 , 'CARZ' , 'Equity' , 'YAHOO')
+	   (5 , 'CARZ' , 'Equity' , 'YAHOO'),
+       (6 , '^TYX' , 'Equity' , 'YAHOO')
 ;
