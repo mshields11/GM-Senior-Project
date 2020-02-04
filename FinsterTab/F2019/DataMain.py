@@ -6,8 +6,12 @@ from FinsterTab.F2019.BuySell import BuySell
 from FinsterTab.F2019.EngineeredFeatures import EngineeredFeatures
 from FinsterTab.F2019.TradingSimulator import TradingSimulator
 
+
+
 # create database connection
 db_engine = DBEngine().mysql_engine()
+
+DataFetch.macroFetch(db_engine)
 
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'
@@ -79,4 +83,6 @@ simulator.combination_trade_sim()
 
 # buy and hold simulation
 simulator.buy_hold_sim()
+
+
 

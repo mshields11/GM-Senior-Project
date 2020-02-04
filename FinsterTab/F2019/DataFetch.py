@@ -4,6 +4,8 @@ import pandas as pd
 from datetime import datetime, timedelta, date    # library for date and time calculations
 import sqlalchemy as sal                          # SQL toolkit, Object-Relational Mapper for Python
 from pandas.tseries.holiday import get_calendar, HolidayCalendarFactory, GoodFriday  # calendar module to use a pre-configured calendar
+import quandl
+
 
 # Declaration and Definition of DataFetch class
 
@@ -107,5 +109,26 @@ class DataFetch:
             isholiday = (1 if day in holidays else 0)
             date_query = date_query.format(day_str, day.year, day.month, qtr, weekend, isholiday)
             self.engine.execute(date_query)
+
+    def macroFetch(self):
+        data = quandl.get("USMISERY/INDEX", authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31", end_date="2019-12-31")                                   #Fetches data from quandl, stores in a dataframe
+        data.rename(columns={'Date': 'date', 'Uneployment Rate': 'unemployment', 'Inflation Rate': 'inflation', 'Misery Index' : 'misery'}, inplace=True)       #Renames the columns of the dataframe variable storing data from quandl
+        data = data.reset_index()                                                                                                                               #Resets the index so it is easier to work with
+        data.sort_values(by=['Date'])                                                                                                                           #Ensures the values are sorted by date
+        data.to_sql('macrovar', self.engine, if_exists=('replace'),                                                                                             #Inserts the data into SQL
+                    index=False, dtype={'date': sal.Date, 'unemployment': sal.FLOAT, 'inflation': sal.FLOAT, 'misery': sal.FLOAT})
+
+        #SQL Code to truncate datetime to just date (Add a query for this here)
+        #ALTER TABLE `gmfsp_db`.`macrovar2`
+                #CHANGE COLUMN `Date` `Date` DATE NULL DEFAULT NULL ;
+
+        #Unemplyment Old Code:  data = quandl.get("FRED/NROUST", authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31", end_date="2019-12-31")
+                        #data.rename(columns={'Date': 'date', 'Value' : 'unemployment'}, inplace=True)
+                        #data = data.reset_index()
+                        #data.sort_values(by=['Date'])
+                        #data.to_sql('macrovar', self.engine, if_exists=('replace'),
+                            #index=False, dtype={'date': sal.Date, 'gdp': sal.FLOAT})
+
+
 
 # END CODE MODULE
