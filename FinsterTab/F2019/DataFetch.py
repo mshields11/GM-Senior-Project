@@ -111,23 +111,42 @@ class DataFetch:
             self.engine.execute(date_query)
 
     def macroFetch(self):
-        data = quandl.get("USMISERY/INDEX", authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31", end_date="2019-12-31")                                   #Fetches data from quandl, stores in a dataframe
-        data.rename(columns={'Date': 'date', 'Unemployment Rate': 'unemployment', 'Inflation Rate': 'inflation', 'Misery Index' : 'misery'}, inplace=True)       #Renames the columns of the dataframe variable storing data from quandl
-        data = data.reset_index()                                                                                                                               #Resets the index so it is easier to work with
-        data.sort_values(by=['Date'])                                                                                                                           #Ensures the values are sorted by date
-        data.to_sql('macrovar', self.engine, if_exists=('replace'),                                                                                             #Inserts the data into SQL
-                    index=False, dtype={'date': sal.Date, 'unemployment': sal.FLOAT, 'inflation': sal.FLOAT, 'misery': sal.FLOAT})
+        vars = ["FRBP/GDPPLUS", "USMISERY/INDEX"]                                                                       #Hardcoded Quandl keys used to retrieve data from Quandl
+        for n in range (len(vars)):
+            data = quandl.get(vars[n], authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31",                       #Retrieves data source corresponding to var[n]
+                              end_date="2020-02-05")
+            data = data.reset_index()                                                                                   #Resets the index so easier to work with
 
-        #SQL Code to truncate datetime to just date (Add a query for this here)
-        #ALTER TABLE `gmfsp_db`.`macrovar2`
-                #CHANGE COLUMN `Date` `Date` DATE NULL DEFAULT NULL ;
+            if (len(data.columns) == 2):                                                                                #Checks if the number of columns is 2 as if so it is straightforward to draw the data
+                data.rename(columns={'Date': 'date', 'Value': 'statistics'}, inplace=True)                              #Renames the columns of a 2 column table
+                data.sort_values(by=['date'])                                                                           #Ensures the rows are ordered according to date
+                data['instrumentID'] = n+1                                                                              #Adds a new column for the instrument ID
+                data.to_sql('dbo_macrostatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),          # Inserts the data into SQL
+                            index=False, dtype={'date': sal.Date, 'statistics': sal.FLOAT, 'instrumentID': sal.INT})
 
-        #Unemplyment Old Code:  data = quandl.get("FRED/NROUST", authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31", end_date="2019-12-31")
-                        #data.rename(columns={'Date': 'date', 'Value' : 'unemployment'}, inplace=True)
-                        #data = data.reset_index()
-                        #data.sort_values(by=['Date'])
-                        #data.to_sql('macrovar', self.engine, if_exists=('replace'),
-                            #index=False, dtype={'date': sal.Date, 'gdp': sal.FLOAT})
+            elif (len(data.columns) > 2):                                                                               #Checks if the number of columns is greater than 2 and if so it becomes more complex to pull
+                colName = list(data.columns)                                                                            #Create a list of the column names from the data drawn
+                colNewName = list(data.columns)                                                                         #Create a list of the column names but to be used to store new column names
+                for x in range (len(colName)):                                                                          #Loops through the colName list
+                    if x == 0:                                                                                          #The first column will always be date, so we set the first index value to 'date'
+                        colNewName[x] = 'date'
+                    else:                                                                                               #Otherwise we rename the columns statistic + the number of the column
+                        colNewName[x] = 'statistics' + str(x)                                                           #This allows us to differentiate rows and dynamically insert the data into mySQL
+
+                for l in range(len(colName)):
+                    data.rename(columns={colName[l]: colNewName[l]}, inplace=True)                                      #This then actually renames the columns of the dataframe variable
+
+                for j in range (len(colNewName)-1):                                                                     #For loop to loop through the dataframe variable and insert into mySQL
+                    data1 = data[[colNewName[0], colNewName[j+1]]]                                                      #First we get the first column which is always date and then the first column we have yet to insert and assign it to a new dataframe variable
+                    data1.rename(columns={'date': 'date', colNewName[j+1]: 'statistics'}, inplace=True)                 #We then dynamically rename the column name of the new dataframe variable
+                    data1['instrumentID'] = (j + n) + 1                                                                 #Then add an instrument ID column that adds the value of the indexing variable of the outer for loop to the indexing of the inner for loop + 1
+                    data1.to_sql('dbo_macrostatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),     #And finally insert the new dataframe variable into MySQL
+                                index=False)
+
+
+
+
+
 
 
 

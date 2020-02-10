@@ -143,3 +143,19 @@ values (1 , 'GM'   , 'Equity' , 'YAHOO'),
 	   (5 , 'CARZ' , 'Equity' , 'YAHOO'),
        (6 , '^TYX' , 'Equity' , 'YAHOO')
 ;
+
+drop table if exists dbo_macromaster;  
+create table dbo_macromaster(
+instrumentid            int null,
+instrumentname          varchar(50) null,
+accesskey               varchar(50) null
+)
+;
+
+TRUNCATE TABLE dbo_macromaster;
+insert into dbo_macromaster
+values (1 , 'GDP'   , 'FRBP/GDPPLUS'),
+	   (2 , 'Unemployment Rate'  , 'USMISERY/INDEX'),
+	   (3 , 'Inflation Rate'  , 'USMISERY/INDEX' ),
+	   (4 , 'Misery Index'  , 'USMISERY/INDEX')
+;
