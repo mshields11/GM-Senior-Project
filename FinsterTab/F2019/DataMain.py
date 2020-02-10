@@ -9,7 +9,7 @@ from TradingSimulator import TradingSimulator
 # create database connection
 db_engine = DBEngine().mysql_engine()
 
-DataFetch.macroFetch(db_engine)
+#DataFetch.macroFetch(db_engine)
 
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'
@@ -25,32 +25,32 @@ master_data.get_data(ticker_symbols)
 
 # get date data and store in DateDim, replaced the SQL calendar code
 master_data.get_calendar()
-
+print("done")
 # calculate technical indicators and store in EngineeredFeatures
 indicators = EngineeredFeatures(db_engine, instrument_master)
 indicators.calculate()
-
+print("done")
 # Get Raw Data from database to calculate forecasts
 forecast = DataForecast(db_engine, instrument_master)
-
+print("done")
 # calculate and store price predictions
 forecast.calculate_forecast()
-
+print("done")
 # calculate and store ARIMA forecast
 forecast.calculate_arima_forecast()
-
+print("done")
 # calculate and store Random Forest forecast
 forecast.calculate_random_forest_forecast()
-
+print("done")
 # flawed price prediction from previous semesters, without our improvements
 forecast.calculate_forecast_old()
-
+print("done")
 # calculate and store SVM forecast
 forecast.calculate_svm_forecast()
-
+print("done")
 # calculate and store XGBoost forecast
 forecast.calculate_xgboost_forecast()
-
+print("done")
 
 # Get Raw Data and Technical Indicators
 signals = BuySell(db_engine, instrument_master)
@@ -69,7 +69,7 @@ signals.macd_signal()
 
 # forecast-based signals
 signals.algo_signal()
-
+print("done")
 # Run Trade Simulations Based on Trade Signals
 simulator = TradingSimulator(db_engine, instrument_master)
 
@@ -82,5 +82,5 @@ simulator.combination_trade_sim()
 # buy and hold simulation
 simulator.buy_hold_sim()
 
-
+print("done")
 
