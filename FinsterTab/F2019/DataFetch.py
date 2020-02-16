@@ -144,26 +144,26 @@ class DataFetch:
                     data1.to_sql('dbo_macrostatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),     #And finally insert the new dataframe variable into MySQL
                                 index=False)
 
-    def GDPForecast(self):
-        query = 'SELECT * FROM dbo_macrostatistics WHERE instrumentid = 1'
-        df = pd.read_sql_query(query, self.engine)
-        query = "SELECT close FROM dbo_instrumentstatistics WHERE instrumentid = 3 AND date BETWEEN '2014-03-21' AND '2016-03-31'"
-        df2 = pd.read_sql_query(query, self.engine)
-
-        import datetime
-        currentDate = datetime.datetime.now()
-
-        for year in range(currentDate.year, currentDate.year + 2):
-
-            firstQuarter  = str(year) + "-03-" + "31"
-            secondQuarter = str(year) + "-06-" + "30"
-            thirdQuarter  = str(year) + "-09-" + "30"
-            fourthQuarter = str(year) + "-12-" + "31"
-
-            print(firstQuarter)
-
-            query = 'SELECT * FROM dbo_instrumentstatistics WHERE date = %s' % firstQuarter
-            df = pd.read_sql_query(query, self.engine)
-            print(df)
+    # def GDPForecast(self):
+    #     query = 'SELECT * FROM dbo_macrostatistics WHERE instrumentid = 1'
+    #     df = pd.read_sql_query(query, self.engine)
+    #     query = "SELECT close FROM dbo_instrumentstatistics WHERE instrumentid = 3 AND date BETWEEN '2014-03-21' AND '2016-03-31'"
+    #     df2 = pd.read_sql_query(query, self.engine)
+    #
+    #     import datetime
+    #     currentDate = datetime.datetime.now()
+    #
+    #     for year in range(currentDate.year, currentDate.year + 2):
+    #
+    #         firstQuarter  = str(year) + "-03-" + "31"
+    #         secondQuarter = str(year) + "-06-" + "30"
+    #         thirdQuarter  = str(year) + "-09-" + "30"
+    #         fourthQuarter = str(year) + "-12-" + "31"
+    #
+    #         print(firstQuarter)
+    #
+    #         query = 'SELECT * FROM dbo_instrumentstatistics WHERE date = %s' % firstQuarter
+    #         df = pd.read_sql_query(query, self.engine)
+    #         print(df)
 
 # END CODE MODULE
