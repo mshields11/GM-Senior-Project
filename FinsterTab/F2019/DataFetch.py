@@ -4,6 +4,8 @@ import pandas as pd
 from datetime import datetime, timedelta, date    # library for date and time calculations
 import sqlalchemy as sal                          # SQL toolkit, Object-Relational Mapper for Python
 from pandas.tseries.holiday import get_calendar, HolidayCalendarFactory, GoodFriday  # calendar module to use a pre-configured calendar
+import quandl
+
 
 # Declaration and Definition of DataFetch class
 
@@ -107,5 +109,61 @@ class DataFetch:
             isholiday = (1 if day in holidays else 0)
             date_query = date_query.format(day_str, day.year, day.month, qtr, weekend, isholiday)
             self.engine.execute(date_query)
+
+    def macroFetch(self):
+        vars = ["FRBP/GDPPLUS", "USMISERY/INDEX"]                                                                       #Hardcoded Quandl keys used to retrieve data from Quandl
+        for n in range (len(vars)):
+            data = quandl.get(vars[n], authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31",                       #Retrieves data source corresponding to var[n]
+                              end_date="2020-02-05")
+            data = data.reset_index()                                                                                   #Resets the index so easier to work with
+
+            if (len(data.columns) == 2):                                                                                #Checks if the number of columns is 2 as if so it is straightforward to draw the data
+                data.rename(columns={'Date': 'date', 'Value': 'statistics'}, inplace=True)                              #Renames the columns of a 2 column table
+                data.sort_values(by=['date'])                                                                           #Ensures the rows are ordered according to date
+                data['instrumentID'] = n+1                                                                              #Adds a new column for the instrument ID
+                data.to_sql('dbo_macrostatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),          # Inserts the data into SQL
+                            index=False, dtype={'date': sal.Date, 'statistics': sal.FLOAT, 'instrumentID': sal.INT})
+
+            elif (len(data.columns) > 2):                                                                               #Checks if the number of columns is greater than 2 and if so it becomes more complex to pull
+                colName = list(data.columns)                                                                            #Create a list of the column names from the data drawn
+                colNewName = list(data.columns)                                                                         #Create a list of the column names but to be used to store new column names
+                for x in range (len(colName)):                                                                          #Loops through the colName list
+                    if x == 0:                                                                                          #The first column will always be date, so we set the first index value to 'date'
+                        colNewName[x] = 'date'
+                    else:                                                                                               #Otherwise we rename the columns statistic + the number of the column
+                        colNewName[x] = 'statistics' + str(x)                                                           #This allows us to differentiate rows and dynamically insert the data into mySQL
+
+                for l in range(len(colName)):
+                    data.rename(columns={colName[l]: colNewName[l]}, inplace=True)                                      #This then actually renames the columns of the dataframe variable
+
+                for j in range (len(colNewName)-1):                                                                     #For loop to loop through the dataframe variable and insert into mySQL
+                    data1 = data[[colNewName[0], colNewName[j+1]]]                                                      #First we get the first column which is always date and then the first column we have yet to insert and assign it to a new dataframe variable
+                    data1.rename(columns={'date': 'date', colNewName[j+1]: 'statistics'}, inplace=True)                 #We then dynamically rename the column name of the new dataframe variable
+                    #print(data1)
+                    data1['instrumentID'] = (j + n) + 1                                                                 #Then add an instrument ID column that adds the value of the indexing variable of the outer for loop to the indexing of the inner for loop + 1
+                    data1.to_sql('dbo_macrostatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),     #And finally insert the new dataframe variable into MySQL
+                                index=False)
+
+    # def GDPForecast(self):
+    #     query = 'SELECT * FROM dbo_macrostatistics WHERE instrumentid = 1'
+    #     df = pd.read_sql_query(query, self.engine)
+    #     query = "SELECT close FROM dbo_instrumentstatistics WHERE instrumentid = 3 AND date BETWEEN '2014-03-21' AND '2016-03-31'"
+    #     df2 = pd.read_sql_query(query, self.engine)
+    #
+    #     import datetime
+    #     currentDate = datetime.datetime.now()
+    #
+    #     for year in range(currentDate.year, currentDate.year + 2):
+    #
+    #         firstQuarter  = str(year) + "-03-" + "31"
+    #         secondQuarter = str(year) + "-06-" + "30"
+    #         thirdQuarter  = str(year) + "-09-" + "30"
+    #         fourthQuarter = str(year) + "-12-" + "31"
+    #
+    #         print(firstQuarter)
+    #
+    #         query = 'SELECT * FROM dbo_instrumentstatistics WHERE date = %s' % firstQuarter
+    #         df = pd.read_sql_query(query, self.engine)
+    #         print(df)
 
 # END CODE MODULE
