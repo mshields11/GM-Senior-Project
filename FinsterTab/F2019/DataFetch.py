@@ -139,16 +139,31 @@ class DataFetch:
                 for j in range (len(colNewName)-1):                                                                     #For loop to loop through the dataframe variable and insert into mySQL
                     data1 = data[[colNewName[0], colNewName[j+1]]]                                                      #First we get the first column which is always date and then the first column we have yet to insert and assign it to a new dataframe variable
                     data1.rename(columns={'date': 'date', colNewName[j+1]: 'statistics'}, inplace=True)                 #We then dynamically rename the column name of the new dataframe variable
-                    print(data1)
+                    #print(data1)
                     data1['instrumentID'] = (j + n) + 1                                                                 #Then add an instrument ID column that adds the value of the indexing variable of the outer for loop to the indexing of the inner for loop + 1
                     data1.to_sql('dbo_macrostatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),     #And finally insert the new dataframe variable into MySQL
                                 index=False)
 
+    def GDPForecast(self):
+        query = 'SELECT * FROM dbo_macrostatistics WHERE instrumentid = 1'
+        df = pd.read_sql_query(query, self.engine)
+        query = "SELECT close FROM dbo_instrumentstatistics WHERE instrumentid = 3 AND date BETWEEN '2014-03-21' AND '2016-03-31'"
+        df2 = pd.read_sql_query(query, self.engine)
 
+        import datetime
+        currentDate = datetime.datetime.now()
 
+        for year in range(currentDate.year, currentDate.year + 2):
 
+            firstQuarter  = str(year) + "-03-" + "31"
+            secondQuarter = str(year) + "-06-" + "30"
+            thirdQuarter  = str(year) + "-09-" + "30"
+            fourthQuarter = str(year) + "-12-" + "31"
 
+            print(firstQuarter)
 
-
+            query = 'SELECT * FROM dbo_instrumentstatistics WHERE date = %s' % firstQuarter
+            df = pd.read_sql_query(query, self.engine)
+            print(df)
 
 # END CODE MODULE
