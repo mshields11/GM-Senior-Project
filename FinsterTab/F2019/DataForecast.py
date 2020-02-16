@@ -92,6 +92,7 @@ class DataForecast:
 
                 # populate entire table if empty
                 # or add new dates based on information in Statistics table
+                """Look into this to add SMA"""
                 if latest_date.empty or latest_date['forecastdate'][0] <= data['date'][n]:
                     if data['sMomentum'][n-1] >= 0 and data['lMomentum'][n-1] >= 0:
                         forecastClose = data['close'][n-1] + (2.576 * data['stDev'][n-1] / sqrt(sDev))
@@ -137,6 +138,7 @@ class DataForecast:
 
             # forecast next 9 days
             # for i in range # of weekdays
+            """Forecast for future from here down"""
             for i in range(1, len(future_dates)):
 
                 insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ({}, {}, {}, {}, {})'
@@ -235,6 +237,7 @@ class DataForecast:
                 insert_query = insert_query.format(forecastDateStr, ID, forecast[i], algoCode, predError)
                 self.engine.execute(insert_query)
 
+    """Look into why warnings due to incorrect inputs"""
     def calculate_arima_forecast(self):
         """
         Calculate historic next-day returns based on ARIMA forecast model
@@ -280,7 +283,7 @@ class DataForecast:
             # get raw price data from database
             data_query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid=%s ORDER BY Date ASC' % ID
             data = pd.read_sql_query(data_query, self.engine)
-
+            """Below here to look at for ARIMA warnings and to tweak"""
             # training data size
             # IF THIS CHANGES ALL PREDICTIONS STORED IN DATABASE BECOME INVALID!
             input_length = 10
@@ -433,6 +436,7 @@ class DataForecast:
                 insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                 self.engine.execute(insert_query)
 
+    """Delete Forecast old"""
     def calculate_forecast_old(self):
         """
         Calculate historic one day returns based on traditional forecast model
@@ -512,6 +516,7 @@ class DataForecast:
                     insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                     self.engine.execute(insert_query)
 
+    """Use these forecast to generate buy sell signals"""
     def calculate_svm_forecast(self):
         """
         Calculate historic next-day returns based on SVM

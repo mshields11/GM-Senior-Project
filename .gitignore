@@ -1,0 +1,12 @@
+# Ignore files related to API keys
+.env
+
+# Ignore virtual environment
+FinsterTab/F2019/venv/
+
+# Ignore database due to different password
+FinsterTab/F2019/dbEngine.py
+
+.DS_Store
+
+ignore.txt
