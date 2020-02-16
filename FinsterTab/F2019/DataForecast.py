@@ -7,6 +7,7 @@ from math import sqrt
 from statistics import stdev
 import numpy as np
 import xgboost as xgb
+import datetime
 from sklearn.model_selection import train_test_split    # not used at this time
 
 # class declaration and definition
@@ -293,11 +294,13 @@ class DataForecast:
 
                 # populate entire table if empty
                 # or add new dates based on information in Statistics table
+
                 if latest_date.empty or latest_date['forecastdate'][0] <= data['date'][n]:
                     training_data = data['close'][n-(input_length-1):n]
                     arima = ARIMA(training_data, order=(0,1,0))    # most suited order combination after many trials
                     fitted_arima = arima.fit(disp=-1)
                     forecastClose = data['close'][n] + fitted_arima.fittedvalues[n-1]
+
                     predError = 100 * abs(forecastClose - data['close'][n]) / data['close'][n]
                     forecastDate = "'" + str(data['date'][n]) + "'"
 
@@ -736,4 +739,37 @@ class DataForecast:
                 forecastDate = "'" + str(future_dates['date'][n]) + "'"
                 insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                 self.engine.execute(insert_query)
+
+    def GDPForecast(self):
+        query = 'SELECT * FROM dbo_macrostatistics WHERE instrumentid = 1'
+        df = pd.read_sql_query(query, self.engine)
+        query = "SELECT close FROM dbo_instrumentstatistics WHERE instrumentid = 3 AND date BETWEEN '2014-03-21' AND '2016-03-31'"
+        df2 = pd.read_sql_query(query, self.engine)
+        print(df2)
+        GDP = df['statistics'][57]
+        S = df2['close'][510]
+        print('Most recent S&P: ', S)
+
+        G = (GDP*2)/8
+        G = G/100
+        currentDate = datetime.date.today()
+
+        data = []
+        for year in range(currentDate.year, currentDate.year + 2):
+            data.append("'" + str(year) + "-03-" + "31" + "'")
+            data.append("'" + str(year) + "-06-" + "30" + "'")
+            data.append("'" + str(year) + "-09-" + "30" + "'")
+            data.append("'" + str(year) + "-12-" + "31" + "'")
+
+        s1 = []
+        for n in range(len(data)):
+            S = (S*G) + S
+            s1.append(S)
+            insert_query = "INSERT INTO dbo_macroeconforecast VALUES (1, {}, {})".format(data[n], s1[n])
+            self.engine.execute(insert_query)
+
+
+
+
+
 # END CODE MODULE

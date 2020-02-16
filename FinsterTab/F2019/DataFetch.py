@@ -19,7 +19,7 @@ class DataFetch:
         self.engine = engine
         self.table_name = table_name
         self.datasource = 'yahoo'
-        self.datalength = 1096    # last 3 years, based on actual calendar days of 365
+        self.datalength = 2192    # last 6 years, based on actual calendar days of 365
 
     def get_datasources(self):
         """
@@ -78,9 +78,9 @@ class DataFetch:
         truncate_query = 'TRUNCATE TABLE dbo_datedim'
         self.engine.execute(truncate_query)
 
-        # 3 years of past data and up to 50 days of future forecasts
+        # 3 years of past data and up to 1 year of future forecasts
         begin = date.today() - timedelta(days=self.datalength)
-        end = date.today() + timedelta(days=50)
+        end = date.today() + timedelta(days=365)
 
         # list of US holidays
         cal = get_calendar('USFederalHolidayCalendar')  # Create calendar instance

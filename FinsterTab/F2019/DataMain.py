@@ -12,6 +12,7 @@ from FinsterTab.F2019.TradingSimulator import TradingSimulator
 db_engine = DBEngine().mysql_engine()
 
 DataFetch.macroFetch(db_engine)
+DataForecast.GDPForecast(db_engine)
 
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'
