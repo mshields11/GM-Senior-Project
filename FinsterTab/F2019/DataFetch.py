@@ -111,7 +111,7 @@ class DataFetch:
             self.engine.execute(date_query)
 
     def macroFetch(self):
-        vars = ["FRBP/GDPPLUS", "USMISERY/INDEX"]                                                                       #Hardcoded Quandl keys used to retrieve data from Quandl
+        vars = ["FRED/NGDPPOT", "USMISERY/INDEX"]                                                                       #Hardcoded Quandl keys used to retrieve data from Quandl
         for n in range (len(vars)):
             data = quandl.get(vars[n], authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31",                       #Retrieves data source corresponding to var[n]
                               end_date="2020-02-05")

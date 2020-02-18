@@ -8,6 +8,7 @@ from statistics import stdev
 import numpy as np
 import xgboost as xgb
 import datetime
+import sqlalchemy as sal
 from sklearn.model_selection import train_test_split    # not used at this time
 
 # class declaration and definition
@@ -741,35 +742,84 @@ class DataForecast:
                 self.engine.execute(insert_query)
 
     def GDPForecast(self):
+        n = 9
+        currentDate = str(datetime.date.today())
+        currentDate = ("'" + currentDate + "'")
         query = 'SELECT * FROM dbo_macrostatistics WHERE instrumentid = 1'
         df = pd.read_sql_query(query, self.engine)
-        query = "SELECT close FROM dbo_instrumentstatistics WHERE instrumentid = 3 AND date BETWEEN '2014-03-21' AND '2016-03-31'"
+        query = "SELECT close FROM dbo_instrumentstatistics WHERE instrumentid = 3 AND " \
+                "date BETWEEN '2017-03-21' AND {}".format(currentDate)
         df2 = pd.read_sql_query(query, self.engine)
-        print(df2)
-        GDP = df['statistics'][57]
-        S = df2['close'][510]
-        print('Most recent S&P: ', S)
+        GDP = df.tail(n)
+        SP = df2.tail(n)
+        temp = df.tail(n+1)
+        temp = temp.reset_index()
 
-        G = (GDP*2)/8
-        G = G/100
+        #Converts GDP to precent change
+        GDPPercentChange = GDP
+        GDP = GDP.reset_index()
+        SP = SP.reset_index(drop=True)
+        GDPPercentChange = GDPPercentChange.reset_index(drop=True)
+        for i in range(0, n):
+            if (i == 0):
+                GDPv = (GDP['statistics'][i]-temp['statistics'][i])/temp['statistics'][i]
+                GDPPercentChange['statistics'].iloc[i] = GDPv * 100
+            else:
+                GDPv = (GDP['statistics'][i]-GDP['statistics'][i - 1])/GDP['statistics'][i - 1]
+                GDPPercentChange['statistics'].iloc[i] = GDPv * 100
+
         currentDate = datetime.date.today()
 
-        data = []
-        for year in range(currentDate.year, currentDate.year + 2):
-            data.append("'" + str(year) + "-03-" + "31" + "'")
-            data.append("'" + str(year) + "-06-" + "30" + "'")
-            data.append("'" + str(year) + "-09-" + "30" + "'")
-            data.append("'" + str(year) + "-12-" + "31" + "'")
+        #Getting Dates for Future Forecast
+        date = []
+        count = 0
+        if (currentDate.month < 4):
+            count = 0
+        elif (currentDate.month < 7 and currentDate.month >= 4):
+            count = 1
+        elif (currentDate.month < 10 and currentDate.month >= 7):
+            count = 2
+        else:
+            count = 3
+        year = currentDate.year
+        for i in range(n):
 
-        s1 = []
-        for n in range(len(data)):
-            S = (S*G) + S
-            s1.append(S)
-            insert_query = "INSERT INTO dbo_macroeconforecast VALUES (1, {}, {})".format(data[n], s1[n])
-            self.engine.execute(insert_query)
+            if (count == 0):
+                date.append(str(year) + "-03-" + "31")
+                count += 1
+            elif (count == 1):
+                date.append(str(year) + "-06-" + "30")
+                count += 1
+            elif (count == 2):
+                date.append(str(year) + "-09-" + "30")
+                count += 1
+            else:
+                date.append(str(year) + "-12-" + "31")
+                count = 0
+                year = year + 1
+
+        G = 0
+        S = 0
 
 
 
 
+
+        for j in range(n):
+            G = GDPPercentChange['statistics'][i] + G
+            S = SP['close'][i] + S
+        G = G/n
+        S = S/n
+        G = (G/2)
+        G = G/100
+
+
+        data = [[]]
+        for i in range(n):
+            S = (S * G) + S
+            data.append([date[i], S, GDPPercentChange['instrumentID'][i]])
+        table = pd.DataFrame(data, columns=['date', 'forecast price', 'instrumentID'])
+        table.to_sql('dbo_macroeconforecast', self.engine, if_exists=('replace'), index=False,
+                     dtype={'date': sal.Date, 'forecast price': sal.FLOAT, 'macroID': sal.INT})
 
 # END CODE MODULE
