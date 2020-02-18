@@ -120,9 +120,9 @@ class DataFetch:
             if (len(data.columns) == 2):                                                                                #Checks if the number of columns is 2 as if so it is straightforward to draw the data
                 data.rename(columns={'Date': 'date', 'Value': 'statistics'}, inplace=True)                              #Renames the columns of a 2 column table
                 data.sort_values(by=['date'])                                                                           #Ensures the rows are ordered according to date
-                data['instrumentID'] = n+1                                                                              #Adds a new column for the instrument ID
-                data.to_sql('dbo_macrostatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),          # Inserts the data into SQL
-                            index=False, dtype={'date': sal.Date, 'statistics': sal.FLOAT, 'instrumentID': sal.INT})
+                data['macroID'] = n+1                                                                                   #Adds a new column for the instrument ID
+                data.to_sql('dbo_macroeconstatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),          # Inserts the data into SQL
+                            index=False, dtype={'date': sal.Date, 'statistics': sal.FLOAT, 'macroID': sal.INT})
 
             elif (len(data.columns) > 2):                                                                               #Checks if the number of columns is greater than 2 and if so it becomes more complex to pull
                 colName = list(data.columns)                                                                            #Create a list of the column names from the data drawn
@@ -139,8 +139,8 @@ class DataFetch:
                 for j in range (len(colNewName)-1):                                                                     #For loop to loop through the dataframe variable and insert into mySQL
                     data1 = data[[colNewName[0], colNewName[j+1]]]                                                      #First we get the first column which is always date and then the first column we have yet to insert and assign it to a new dataframe variable
                     data1.rename(columns={'date': 'date', colNewName[j+1]: 'statistics'}, inplace=True)                 #We then dynamically rename the column name of the new dataframe variable
-                    data1['instrumentID'] = (j + n) + 1                                                                 #Then add an instrument ID column that adds the value of the indexing variable of the outer for loop to the indexing of the inner for loop + 1
-                    data1.to_sql('dbo_macrostatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),     #And finally insert the new dataframe variable into MySQL
+                    data1['macroID'] = (j + n) + 1                                                                      #Then add an instrument ID column that adds the value of the indexing variable of the outer for loop to the indexing of the inner for loop + 1
+                    data1.to_sql('dbo_macroeconstatistics', self.engine, if_exists=('replace' if n == 0 else 'append'), #And finally insert the new dataframe variable into MySQL
                                 index=False)
 
 

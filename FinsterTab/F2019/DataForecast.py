@@ -745,11 +745,13 @@ class DataForecast:
         n = 9
         currentDate = str(datetime.date.today())
         currentDate = ("'" + currentDate + "'")
-        query = 'SELECT * FROM dbo_macrostatistics WHERE instrumentid = 1'
+
+        query = 'SELECT * FROM dbo_macroeconstatistics WHERE macroid = 1'
         df = pd.read_sql_query(query, self.engine)
-        query = "SELECT close FROM dbo_instrumentstatistics WHERE instrumentid = 3 AND " \
+        query = "SELECT close, instrumentID FROM dbo_instrumentstatistics WHERE instrumentid = 3 AND " \
                 "date BETWEEN '2017-03-21' AND {}".format(currentDate)
         df2 = pd.read_sql_query(query, self.engine)
+
         GDP = df.tail(n)
         SP = df2.tail(n)
         temp = df.tail(n+1)
@@ -757,7 +759,7 @@ class DataForecast:
 
         #Converts GDP to precent change
         GDPPercentChange = GDP
-        GDP = GDP.reset_index()
+        GDP = GDP.reset_index(drop=True)
         SP = SP.reset_index(drop=True)
         GDPPercentChange = GDPPercentChange.reset_index(drop=True)
         for i in range(0, n):
@@ -797,14 +799,9 @@ class DataForecast:
                 date.append(str(year) + "-12-" + "31")
                 count = 0
                 year = year + 1
-
+        #Algorithm for forecast price
         G = 0
         S = 0
-
-
-
-
-
         for j in range(n):
             G = GDPPercentChange['statistics'][i] + G
             S = SP['close'][i] + S
@@ -813,13 +810,14 @@ class DataForecast:
         G = (G/2)
         G = G/100
 
-
-        data = [[]]
+        #Insert forecast values into database
+        data = []
         for i in range(n):
             S = (S * G) + S
-            data.append([date[i], S, GDPPercentChange['instrumentID'][i]])
-        table = pd.DataFrame(data, columns=['date', 'forecast price', 'instrumentID'])
+            data.append([date[i], S, GDPPercentChange['macroID'][i], SP['instrumentID'][i]])
+
+        table = pd.DataFrame(data, columns=['date', 'forecast price', 'macroID', 'instrumentID'])
         table.to_sql('dbo_macroeconforecast', self.engine, if_exists=('replace'), index=False,
-                     dtype={'date': sal.Date, 'forecast price': sal.FLOAT, 'macroID': sal.INT})
+                     dtype={'date': sal.Date, 'forecast price': sal.FLOAT, 'macroid': sal.INT})
 
 # END CODE MODULE
