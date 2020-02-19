@@ -1,19 +1,17 @@
 # Load other local Python modules to be used in this MAIN module
-from FinsterTab.F2019.DataFetch import DataFetch
-from FinsterTab.F2019.DataForecast import DataForecast
-from FinsterTab.F2019.dbEngine import DBEngine
-from FinsterTab.F2019.BuySell import BuySell
-from FinsterTab.F2019.EngineeredFeatures import EngineeredFeatures
-from FinsterTab.F2019.TradingSimulator import TradingSimulator
-
-
+from DataFetch import DataFetch
+from DataForecast import DataForecast
+from dbEngine import DBEngine
+from BuySell import BuySell
+from EngineeredFeatures import EngineeredFeatures
+from TradingSimulator import TradingSimulator
 
 # create database connection
 db_engine = DBEngine().mysql_engine()
 
-DataFetch.macroFetch(db_engine)
+#DataFetch.macroFetch(db_engine)
 DataForecast.GDPForecast(db_engine)
-
+exit(1)
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'
 

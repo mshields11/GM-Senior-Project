@@ -1,4 +1,5 @@
 # import libraries to be used in this code module
+import numpy
 import pandas as pd
 from statsmodels.tsa.arima_model import ARIMA
 from sklearn.ensemble import RandomForestRegressor
@@ -9,6 +10,11 @@ import numpy as np
 import xgboost as xgb
 import datetime
 import sqlalchemy as sal
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+
 from sklearn.model_selection import train_test_split    # not used at this time
 
 # class declaration and definition
@@ -754,13 +760,14 @@ class DataForecast:
                 "AND date BETWEEN '2017-03-21' AND {}".format(currentDate)                                              # Queries the DB to retrieve the intrumentstatistics (currently just for the S&P 500)
         df2 = pd.read_sql_query(query, self.engine)                                                                     #Executes the query and stores the result in a dataframe variable
 
+        x_PR = []
+        y_PR = []
+
         for x in id['macroID']:
             #Retrieves Relevant Data from Database
             query = 'SELECT * FROM dbo_macroeconstatistics WHERE macroid = {}'.format(x)                                #Queries the DB to retrieeve the macoeconstatistics (currently just for GDP)
             df = pd.read_sql_query(query, self.engine)                                                                  #Executes the query and stores the result in a dataframe variable
 
-            print(x)
-            print(df2)
             macro = df.tail(n)                                                                                          #Retrieves the last n rows of the dataframe variable and stores it in GDP, a new dataframe variable
             SP = df2.tail(n)                                                                                            #Performs same operation, this is because we only want to work with a set amount of data points for now
             temp = df.tail(n+1)                                                                                         #Retrieves the nth + 1 row from the GDP tables so we can calculate percent change of the first GDP value
@@ -793,8 +800,7 @@ class DataForecast:
             else:
                 count = 3
             year = currentDate.year                                                                                     #Initialize a variable to the current year
-            for i in range(n):                                                                                          #Setup a for loop to loop through and append the date list with the date of the start of the next quarter
-                                                                                                                        #For loop will run n times, corresponding to amount of data points we are working with
+            for i in range(n):                                                                                          #Setup a for loop to loop through and append the date list with the date of the start of the next quarter                                                                                                      #For loop will run n times, corresponding to amount of data points we are working with
                 if (count == 0):                                                                                        #If the count is 0 then we are still in the first quarter
                     date.append(str(year) + "-03-" + "31")                                                              #Append the date list with corresponding quarter and year
                     count += 1                                                                                          #Increase count so this date is not repeated for this year
@@ -809,6 +815,9 @@ class DataForecast:
                     count = 0
                     year = year + 1                                                                                     #Where we then incrament the year for the next iterations
 
+            for iter in range(len(macroPercentChange)):
+                y_PR.append(macroPercentChange['statistics'].iloc[iter])
+            x_PR.extend(date)
 
             #Algorithm for forecast price
             G, S = DataForecast.calc(self, macroPercentChange, SP, n)                                                   #Calculates the average GDP and S&P values for the given data points over n days and performs operations on GDP average
@@ -822,6 +831,37 @@ class DataForecast:
             table = pd.DataFrame(data, columns=['date', 'forecast price', 'macroID', 'instrumentID'])                   #Convert data list to dataframe variable
             table.to_sql('dbo_macroeconforecast', self.engine, if_exists=('replace' if x == 1 else 'append'),
                          index=False, dtype={'date': sal.Date, 'forecast price': sal.FLOAT, 'macroid': sal.INT})        #Insert dataframe variable into SQL database
+
+        #Polynomial regression
+        x_axis = x_PR
+        y_axis = y_PR
+
+        df = pd.DataFrame({'date': x_axis, 'percent': y_axis})
+
+        # X = np.array(pd.to_datetime(df['date']), dtype=float)
+        # X = np.array(X)
+        # X = X.reshape(-1,1)
+        y = np.array(df['percent'])
+
+        X = np.array([0,1,2,3,4,5,6,7,8,0,1,2,3,4,5,6,7,8,0,1,2,3,4,5,6,7,8,0,1,2,3,4,5,6,7,8])
+        X = X.reshape(-1, 1)
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+        poly_reg = PolynomialFeatures(degree=4)
+        X_poly = poly_reg.fit_transform(X)
+        pol_reg = LinearRegression()
+        pol_reg.fit(X_poly, y)
+
+        plt.scatter(X, y, color='red')
+        plt.plot(X, pol_reg.predict(poly_reg.fit_transform(X)), color='blue')
+        plt.title('Prediction')
+        plt.xlabel('Date')
+        plt.ylabel('Percentage Change')
+        plt.show()
+        exit(1)
+
+
 
     def calc(self, df1, df2, n):
         G = 0
