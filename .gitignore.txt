@@ -1,0 +1,9 @@
+# Ignore files related to API keys
+.env
+
+venv
+
+# Ignore virtual environment
+FinsterTab/F2019/venv/
+
+.DS_Store
