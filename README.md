@@ -1,7 +1,7 @@
 GM FinTech
 README
 
-Mohamad Saab | Abdul Ahmad | John Gettel | Aalem Singh  | CSC4996 | December 11 2019
+Michael Shields | Nabeel Ashgar | Shojib Miah | Michael Chen  | CSC4996 | April 16 2020
 
 
 1. Create a folder 'gmfintech' at a convenient location on machine
