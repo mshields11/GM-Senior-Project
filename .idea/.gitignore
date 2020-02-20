@@ -1,5 +1,16 @@
+# Ignore files related to API keys
+.env
 
-# Default ignored files
-/workspace.xml
-# Datasource local storage ignored files
-/dataSources.local.xml
+#Ignore .idea
+.idea
+
+# Ignore virtual environment
+FinsterTab/F2019/venv/
+
+# Ignore database due to different password
+FinsterTab/F2019/dbEngine.py
+
+.DS_Store
+
+
+ignore.txt
