@@ -747,19 +747,99 @@ class DataForecast:
                 insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                 self.engine.execute(insert_query)
 
+    def regression(self):
+        """
+            Calculate polynomial regression of the next 10 periods(day or quarters)
+        """
+        # retrieve InstrumentsMaster table from database
+        query = 'SELECT * FROM {}'.format(self.table_name)
+        df = pd.read_sql_query(query, self.engine)
+        algoCode = "'PricePredOld'"
+
+        # add code to database if it doesn't exist
+        code_query = 'SELECT COUNT(*) FROM dbo_algorithmmaster WHERE algorithmcode=%s' % algoCode
+        count = pd.read_sql_query(code_query, self.engine)
+        if count.iat[0, 0] == 0:
+            algoName = "'PricePredictionOld'"
+            insert_code_query = 'INSERT INTO dbo_algorithmmaster VALUES({},{})'.format(algoCode, algoName)
+            self.engine.execute(insert_code_query)
+
+        # loop through each ticker symbol
+        for ID in df['instrumentid']:
+
+            # remove all future prediction dates
+            remove_future_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND prederror=0 AND ' \
+                                  'instrumentid={}'.format(algoCode, ID)
+            self.engine.execute(remove_future_query)
+
+            # find the latest forecast date
+            date_query = 'SELECT forecastdate FROM dbo_algorithmforecast WHERE algorithmcode={} AND instrumentid={} ' \
+                         'ORDER BY forecastdate DESC LIMIT 1'.format(algoCode, ID)
+            latest_date = pd.read_sql_query(date_query, self.engine)  # most recent forecast date calculation
+
+            # if table has forecast prices already find the latest one and delete it
+            # need to use most recent data for today when market closes at 4pm, not before that
+            if not latest_date.empty:
+                latest_date_str = "'" + str(latest_date['forecastdate'][0]) + "'"
+                delete_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND instrumentid={} AND ' \
+                               'forecastdate={}'.format(algoCode, ID, latest_date_str)
+                self.engine.execute(delete_query)
+
+            # get raw price data from database
+            data_query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid=%s ORDER BY Date ASC' % ID
+            data = pd.read_sql_query(data_query, self.engine)
+
+            # prediction formula inputs
+            # IF THESE CHANGE ALL RELATED PREDICTIONS STORED IN DATABASE BECOME INVALID!
+            momentum = 5
+            sDev = 10
+            ma = 10
+            start = max(momentum, sDev, ma)
+
+            # calculate prediction inputs
+            data['momentum'] = data['close'].diff(momentum)
+            data['stDev'] = data['close'].rolling(sDev).std()
+            data['movAvg'] = data['close'].rolling(ma).mean()
+
+            # first predictions can me made after 'start' number of days, its 10 days
+            for n in range(start, len(data)):
+                insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ({}, {}, {}, {}, {})'
+
+                # populate entire table if empty
+                # or add new dates based on information in Statistics table
+                if latest_date.empty or latest_date['forecastdate'][0] <= data['date'][n]:
+                    if data['momentum'][n] >= 0:
+                        forecastClose = data['close'][n] + (2.576 * data['stDev'][n] / sqrt(sDev))
+                    else:
+                        forecastClose = data['close'][n] - (2.576 * data['stDev'][n] / sqrt(sDev))
+
+                    predError = 100 * abs(forecastClose - data['close'][n]) / data['close'][n]
+                    forecastDate = "'" + str(data['date'][n]) + "'"
+
+                    # insert new prediction into table
+                    insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
+                    self.engine.execute(insert_query)
 
     def GDPForecast(self):
         query = 'SELECT macroID FROM dbo_macroeconmaster'
         id = pd.read_sql_query(query, self.engine)
         id = id.reset_index(drop=True)
-        n = 9  # Sets value for number of datapoints you would like to work with
+        n = 50  # Sets value for number of datapoints you would like to work with
         currentDate = str(
-        datetime.date.today())  # Initiailizes a variable to represent today's date, used to fetch forecast dates
+        datetime.date.today())  # Initializes a variable to represent today's date, used to fetch forecast dates
         currentDate = ("'" + currentDate + "'")  # Applies quotes to current date so it can be read as a string
         query = "SELECT close, instrumentID FROM dbo_instrumentstatistics WHERE instrumentid = 3 " \
                 "AND date BETWEEN '2017-03-21' AND {}".format(currentDate)                                              # Queries the DB to retrieve the intrumentstatistics (currently just for the S&P 500)
         df2 = pd.read_sql_query(query, self.engine)                                                                     #Executes the query and stores the result in a dataframe variable
 
+        #Variables for macroeconomic values
+        GDP = []
+        U = []
+        IR = []
+        M = []
+        macroValues = []
+
+        #For regression
         x_PR = []
         y_PR = []
 
@@ -767,7 +847,6 @@ class DataForecast:
             #Retrieves Relevant Data from Database
             query = 'SELECT * FROM dbo_macroeconstatistics WHERE macroid = {}'.format(x)                                #Queries the DB to retrieeve the macoeconstatistics (currently just for GDP)
             df = pd.read_sql_query(query, self.engine)                                                                  #Executes the query and stores the result in a dataframe variable
-
             macro = df.tail(n)                                                                                          #Retrieves the last n rows of the dataframe variable and stores it in GDP, a new dataframe variable
             SP = df2.tail(n)                                                                                            #Performs same operation, this is because we only want to work with a set amount of data points for now
             temp = df.tail(n+1)                                                                                         #Retrieves the nth + 1 row from the GDP tables so we can calculate percent change of the first GDP value
@@ -776,15 +855,37 @@ class DataForecast:
             #Converts GDP to precent change
             macroPercentChange = macro                                                                                  #Creates a new dataframe variable and initializes to the GDP table of n rows
             macro = macro.reset_index(drop=True)                                                                        #Resets the index of the GDP dataframe so it is easy to work with
-            SP = SP.reset_index(drop=True)                                                                              #Same here
-            macroPercentChange = macroPercentChange.reset_index(drop=True)                                              #And same here as well
-            for i in range(0, n):                                                                                       #Creates a for loop to calculate the percent change
-                if (i == 0):                                                                                            #On the first iteration grab the extra row stored in temp to compute the first GDP % change value of the table
-                    macrov = (macro['statistics'][i]-temp['statistics'][i])/temp['statistics'][i]
+            SP = SP.reset_index(drop=True)
+            macroPercentChange = macroPercentChange.reset_index(drop=True)
+
+            # Calculate the percent change
+            for i in range(0, n):
+                # Get first row
+                if i == 0:
+                    macrov = (macro['statistics'][i] - temp['statistics'][i]) / temp['statistics'][i]
                     macroPercentChange['statistics'].iloc[i] = macrov * 100
-                else:                                                                                                   #If it is not the first iteration then calculate % change using previous row as normal
-                    macrov = (macro['statistics'][i]-macro['statistics'][i - 1])/macro['statistics'][i - 1]
+                    if x == 1:
+                        GDP.append([macro['date'].iloc[i], macrov, x])
+                    elif x == 2:
+                        U.append([macro['date'].iloc[i], macrov, x])
+                    elif x == 3:
+                        IR.append([macro['date'].iloc[i], macrov, x])
+                    elif x == 4:
+                        M.append([macro['date'].iloc[i], macrov, x])
+
+                # If it is not the first iteration then calculate % change using previous row as normal
+                else:
+                    macrov = (macro['statistics'][i] - macro['statistics'][i - 1]) / macro['statistics'][i - 1]
                     macroPercentChange['statistics'].iloc[i] = macrov * 100
+                    if x == 1:
+                        GDP.append([macro['date'].iloc[i], macrov, x])
+                    elif x == 2:
+                        U.append([macro['date'].iloc[i], macrov, x])
+                    elif x == 3:
+                        IR.append([macro['date'].iloc[i], macrov, x])
+                    elif x == 4:
+                        M.append([macro['date'].iloc[i], macrov, x])
+                    # testingPercent.append([macro['date'].iloc[i], macrov, x])
 
             currentDate = datetime.date.today()                                                                         #Reinitialize currentDate variable so it is a datetime variable rather than a string
 
@@ -815,9 +916,8 @@ class DataForecast:
                     count = 0
                     year = year + 1                                                                                     #Where we then incrament the year for the next iterations
 
-            for iter in range(len(macroPercentChange)):
-                y_PR.append(macroPercentChange['statistics'].iloc[iter])
-            x_PR.extend(date)
+            #Set date for regression
+            x_PR = macro['date']
 
             #Algorithm for forecast price
             G, S = DataForecast.calc(self, macroPercentChange, SP, n)                                                   #Calculates the average GDP and S&P values for the given data points over n days and performs operations on GDP average
@@ -827,24 +927,41 @@ class DataForecast:
             for i in range(n):                                                                                          #Setsup a for loop to calculate the final forecast price and add data to the list variable data
                 S = (S * G) + S
                 data.append([date[i], S, macroPercentChange['macroID'][i], SP['instrumentID'][i]])                      #Column organization setup according to dbo_macroeconforecast
+                #y_PR.append(S)
 
             table = pd.DataFrame(data, columns=['date', 'forecast price', 'macroID', 'instrumentID'])                   #Convert data list to dataframe variable
             table.to_sql('dbo_macroeconforecast', self.engine, if_exists=('replace' if x == 1 else 'append'),
                          index=False, dtype={'date': sal.Date, 'forecast price': sal.FLOAT, 'macroid': sal.INT})        #Insert dataframe variable into SQL database
 
+
+        M = pd.DataFrame(M, columns=['date', 'statistics', 'macroID'])
+        GDP = pd.DataFrame(GDP, columns=['date', 'statistics', 'macroID'])
+        IR = pd.DataFrame(IR, columns=['date', 'statistics', 'macroID'])
+        U = pd.DataFrame(U, columns=['date', 'statistics', 'macroID'])
+
+        print(M['date'])
+
+        for i in range(n):
+            macroValues.append(
+                (GDP['statistics'].iloc[i] * 1) +
+                (U['statistics'].iloc[i] * -0.2) +
+                (IR['statistics'].iloc[i] * -0.2) +
+                (M['statistics'].iloc[i] * -0.1))
+
         #Polynomial regression
-        x_axis = x_PR
-        y_axis = y_PR
 
-        df = pd.DataFrame({'date': x_axis, 'percent': y_axis})
+        #X and Y Axis
+        x_axis = np.array(x_PR)
+        y_axis = macroValues
 
-        # X = np.array(pd.to_datetime(df['date']), dtype=float)
-        # X = np.array(X)
-        # X = X.reshape(-1,1)
-        y = np.array(df['percent'])
+        df = pd.DataFrame({'date': x_axis, 'y-axis': y_axis})
+        df['date'] = pd.to_datetime(df['date'])
+        df['date'] = df['date'].map(datetime.datetime.toordinal)
 
-        X = np.array([0,1,2,3,4,5,6,7,8,0,1,2,3,4,5,6,7,8,0,1,2,3,4,5,6,7,8,0,1,2,3,4,5,6,7,8])
-        X = X.reshape(-1, 1)
+        X = np.array(df['date'])
+        X = np.array(X)
+        X = X.reshape(-1,1)
+        y = np.array(df['y-axis'])
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
 
@@ -861,8 +978,6 @@ class DataForecast:
         plt.show()
         exit(1)
 
-
-
     def calc(self, df1, df2, n):
         G = 0
         S = 0
@@ -874,5 +989,5 @@ class DataForecast:
         S = S / n                                                                                                       #Divide percent change by 2
         G = G / 100                                                                                                     #Then convert from percent to number
         return G,S                                                                                                      #And return both values
-        
+
 # END CODE MODULE
