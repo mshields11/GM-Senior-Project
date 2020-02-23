@@ -747,20 +747,20 @@ class DataForecast:
                 insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                 self.engine.execute(insert_query)
 
-    def regression(self):
+    def calculate_regression(self):
         """
             Calculate polynomial regression of the next 10 periods(day or quarters)
         """
         # retrieve InstrumentsMaster table from database
         query = 'SELECT * FROM {}'.format(self.table_name)
         df = pd.read_sql_query(query, self.engine)
-        algoCode = "'PricePredOld'"
+        algoCode = "'regression'"
 
         # add code to database if it doesn't exist
         code_query = 'SELECT COUNT(*) FROM dbo_algorithmmaster WHERE algorithmcode=%s' % algoCode
         count = pd.read_sql_query(code_query, self.engine)
         if count.iat[0, 0] == 0:
-            algoName = "'PricePredictionOld'"
+            algoName = "'PolynomialRegression'"
             insert_code_query = 'INSERT INTO dbo_algorithmmaster VALUES({},{})'.format(algoCode, algoName)
             self.engine.execute(insert_code_query)
 
@@ -778,7 +778,7 @@ class DataForecast:
             latest_date = pd.read_sql_query(date_query, self.engine)  # most recent forecast date calculation
 
             # if table has forecast prices already find the latest one and delete it
-            # need to use most recent data for today when market closes at 4pm, not before that
+            # need to use most recent data for today if before market close at 4pm
             if not latest_date.empty:
                 latest_date_str = "'" + str(latest_date['forecastdate'][0]) + "'"
                 delete_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND instrumentid={} AND ' \
@@ -789,36 +789,68 @@ class DataForecast:
             data_query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid=%s ORDER BY Date ASC' % ID
             data = pd.read_sql_query(data_query, self.engine)
 
-            # prediction formula inputs
-            # IF THESE CHANGE ALL RELATED PREDICTIONS STORED IN DATABASE BECOME INVALID!
-            momentum = 5
-            sDev = 10
-            ma = 10
-            start = max(momentum, sDev, ma)
+            # regression model from 15 previous days
+            input_length = 15
 
-            # calculate prediction inputs
-            data['momentum'] = data['close'].diff(momentum)
-            data['stDev'] = data['close'].rolling(sDev).std()
-            data['movAvg'] = data['close'].rolling(ma).mean()
+            # predict 10 days ahead
+            forecast_length = 5
 
-            # first predictions can me made after 'start' number of days, its 10 days
-            for n in range(start, len(data)):
-                insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ({}, {}, {}, {}, {})'
+            for n in range(input_length, len(data)):
 
-                # populate entire table if empty
-                # or add new dates based on information in Statistics table
-                if latest_date.empty or latest_date['forecastdate'][0] <= data['date'][n]:
-                    if data['momentum'][n] >= 0:
-                        forecastClose = data['close'][n] + (2.576 * data['stDev'][n] / sqrt(sDev))
-                    else:
-                        forecastClose = data['close'][n] - (2.576 * data['stDev'][n] / sqrt(sDev))
+                recent_data = data[n-input_length:n]
 
-                    predError = 100 * abs(forecastClose - data['close'][n]) / data['close'][n]
-                    forecastDate = "'" + str(data['date'][n]) + "'"
+                # get most recent trading day
+                forecastDate = "'" + str(data['date'][n]) + "'"
 
-                    # insert new prediction into table
-                    insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
+                # x and y axis
+                x_axis = np.array(recent_data['date'])
+                y_axis = np.array(recent_data['close'])
+
+                # convert date to a ordinal value to allow for regression
+                df = pd.DataFrame({'date': x_axis, 'close': y_axis})
+                df['date'] = pd.to_datetime(df['date'])
+                df['date'] = df['date'].map(datetime.datetime.toordinal)
+                #df['date'] = df['date'].map(datetime.datetime.fromordinal)
+
+                X = np.array(df['date'])
+                X = np.array(X)
+                X = X.reshape(-1, 1)
+                y = np.array(df['close'])
+
+                poly_reg = PolynomialFeatures(degree=4)
+                X_poly = poly_reg.fit_transform(X)
+                pol_reg = LinearRegression()
+                pol_reg.fit(X_poly, y)
+                # plt.scatter(X, y, color='red')
+                # plt.plot(X, pol_reg.predict(poly_reg.fit_transform(X)), color='blue')
+                # plt.title('Prediction')
+                # plt.xlabel('Date')
+                # plt.ylabel('Percentage Change')
+                # plt.show()
+
+                forecast_dates_query = 'SELECT date from dbo_datedim WHERE date > {} AND weekend=0 AND isholiday=0 ' \
+                                       'ORDER BY date ASC LIMIT {}'.format(forecastDate, forecast_length)
+
+                future_dates = pd.read_sql_query(forecast_dates_query, self.engine)
+
+                for n in range(len(future_dates)):
+                    insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ({}, {}, {}, {}, {})'
+
+                    forecastDate = future_dates['date'][n]
+
+                    ordinalDate = forecastDate.toordinal()
+                    forecastDate = "'" + str(future_dates['date'][n]) + "'"
+
+                    forecastClose = pol_reg.predict(poly_reg.fit_transform([[ordinalDate]]))
+                    forecastClose = (round(forecastClose[0], 3))
+                    # populate entire table if empty
+                    # or add new dates based on information in Statistics table
+                    insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, 0)
                     self.engine.execute(insert_query)
+
+        exit(1)
+
+
 
     def GDPForecast(self):
         query = 'SELECT macroID FROM dbo_macroeconmaster'
