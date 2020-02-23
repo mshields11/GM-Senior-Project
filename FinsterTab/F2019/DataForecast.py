@@ -848,8 +848,6 @@ class DataForecast:
                     insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, 0)
                     self.engine.execute(insert_query)
 
-        exit(1)
-
 
 
     def GDPForecast(self):

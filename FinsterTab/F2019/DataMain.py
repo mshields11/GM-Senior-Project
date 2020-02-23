@@ -9,34 +9,33 @@ from TradingSimulator import TradingSimulator
 # create database connection
 db_engine = DBEngine().mysql_engine()
 
-#DataFetch.macroFetch(db_engine)
+DataFetch.macroFetch(db_engine)
 #DataForecast.GDPForecast(db_engine)
 
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'
 
 # Get Raw Market Data
-#master_data = DataFetch(db_engine, instrument_master)
+master_data = DataFetch(db_engine, instrument_master)
 
 # get ticker symbols
-#ticker_symbols = master_data.get_datasources()
+ticker_symbols = master_data.get_datasources()
 
 # get data from Yahoo! Finance and store in InstrumentStatistics
-#master_data.get_data(ticker_symbols)
+master_data.get_data(ticker_symbols)
 
 # get date data and store in DateDim, replaced the SQL calendar code
-#master_data.get_calendar()
+master_data.get_calendar()
 
 # calculate technical indicators and store in EngineeredFeatures
-#indicators = EngineeredFeatures(db_engine, instrument_master)
-#indicators.calculate()
+indicators = EngineeredFeatures(db_engine, instrument_master)
+indicators.calculate()
 
 # Get Raw Data from database to calculate forecasts
 forecast = DataForecast(db_engine, instrument_master)
 
 # calculate regression
 forecast.calculate_regression()
-exit(1)
 
 # calculate and store price predictions
 forecast.calculate_forecast()
@@ -55,7 +54,6 @@ forecast.calculate_svm_forecast()
 
 # calculate and store XGBoost forecast
 forecast.calculate_xgboost_forecast()
-
 
 # Get Raw Data and Technical Indicators
 signals = BuySell(db_engine, instrument_master)
@@ -86,6 +84,3 @@ simulator.combination_trade_sim()
 
 # buy and hold simulation
 simulator.buy_hold_sim()
-
-
-
