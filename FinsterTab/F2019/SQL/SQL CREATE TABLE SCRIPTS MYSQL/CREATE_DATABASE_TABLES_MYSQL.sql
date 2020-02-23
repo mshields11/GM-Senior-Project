@@ -148,7 +148,8 @@ drop table if exists dbo_macroeconmaster;
 create table dbo_macroeconmaster(
 macroID            int null,
 instrumentname          varchar(50) null,
-accesskey               varchar(50) null
+accesskey               varchar(50) null,
+access_source			varchar(50) null,
 );
 
 DROP TABLE IF EXISTS dbo_macroeconstatistics;
@@ -166,9 +167,9 @@ CREATE TABLE dbo_macroeconforecast (
     forecastPrice	float);
     
 insert into dbo_macroeconmaster
-values (1 , 'GDP'   , 'FRBP/GDPPLUS'),
-	   (2 , 'Unemployment Rate'  , 'USMISERY/INDEX'),
-	   (3 , 'Inflation Rate'  , 'USMISERY/INDEX' ),
-	   (4 , 'Misery Index'  , 'USMISERY/INDEX')
+values (1 , 'GDP'   , 'FRBP/GDPPLUS', 'Quandl'),
+	   (2 , 'Unemployment Rate'  , 'USMISERY/INDEX', 'Quandl'),
+	   (3 , 'Inflation Rate'  , 'USMISERY/INDEX', 'Quandl'),
+	   (4 , 'Misery Index'  , 'USMISERY/INDEX', 'Quandl')
 ;
 
