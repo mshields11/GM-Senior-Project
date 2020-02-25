@@ -746,7 +746,7 @@ class DataForecast:
                 self.engine.execute(insert_query)
 
 
-    def GDPForecast(self):
+    def MacroForecast(self):
         query = 'SELECT macroID FROM dbo_macroeconmaster'
         id = pd.read_sql_query(query, self.engine)
         id = id.reset_index(drop=True)
@@ -769,13 +769,14 @@ class DataForecast:
             query = "SELECT close, instrumentID FROM dbo_instrumentstatistics WHERE instrumentid = {} " \
                     "AND date BETWEEN '2017-03-21' AND {}".format(v, currentDate)                                       # Queries the DB to retrieve the intrumentstatistics (currently just for the S&P 500)
             df2 = pd.read_sql_query(query, self.engine)                                                                 # Executes the query and stores the result in a dataframe variable
-            print(v, ": ", df2)
+
 
             for x in id['macroID']:
+                if x == 5:
+                    break;
                 #Retrieves Relevant Data from Database
                 query = 'SELECT * FROM dbo_macroeconstatistics WHERE macroid = {}'.format(x)                                #Queries the DB to retrieeve the macoeconstatistics (currently just for GDP)
                 df = pd.read_sql_query(query, self.engine)                                                                  #Executes the query and stores the result in a dataframe variable
-
                 macro = df.tail(n)                                                                                          #Retrieves the last n rows of the dataframe variable and stores it in GDP, a new dataframe variable
                 SP = df2.tail(n)                                                                                            #Performs same operation, this is because we only want to work with a set amount of data points for now
                 temp = df.tail(n+1)                                                                                         #Retrieves the nth + 1 row from the GDP tables so we can calculate percent change of the first GDP value
@@ -789,6 +790,8 @@ class DataForecast:
 
 
                 for i in range(0, n):                                                                                       #Creates a for loop to calculate the percent change
+
+
                     if (i == 0):                                                                                            #On the first iteration grab the extra row stored in temp to compute the first GDP % change value of the table
                         macrov = (macro['statistics'][i]-temp['statistics'][i])/temp['statistics'][i]
                         macroPercentChange['statistics'].iloc[i] = macrov * 100
@@ -873,6 +876,8 @@ class DataForecast:
             Y.append((GDP['statistics'].iloc[i]*1.9) - (U['statistics'].iloc[i]*.4 + IR['statistics'].iloc[i] *.3) - (M['statistics'].iloc[i] * M['statistics'].iloc[i]))
         print(Y)
         x_PR = np.array([i for i in range(len(Y))])
+
+
         #Polynomial regression
         x_axis = x_PR
         y_axis = Y
