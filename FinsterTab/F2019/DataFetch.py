@@ -117,7 +117,8 @@ class DataFetch:
         for i in range(len(data)):
             keys.update({data['accessKey'].iloc[i] : data['accessSource'].iloc[i]})
         cnt = 1
-        now = datetime.now()  # Date Variables
+        now = datetime.now()  # Date
+        curDate = "'" + str(now) + "'"
         end = now.strftime("%Y-%m-%d")
         for n in keys:
 
@@ -132,6 +133,10 @@ class DataFetch:
                     data['macroID'] = cnt                                                                               #Adds a new column for the instrument ID
                     data.to_sql('dbo_macroeconstatistics', self.engine, if_exists=('replace' if cnt == 1 else 'append'),# Inserts the data into SQL
                                 index=False, dtype={'date': sal.Date, 'statistics': sal.FLOAT, 'macroID': sal.INT})
+
+                    query = 'UPDATE dbo_macroeconmaster SET accessDate={}  WHERE macroID = {}'.format(curDate, cnt)     #Sets the access date column for the macro master table
+                    self.engine.execute(query)
+
                     cnt += 1
 
                 elif (len(data.columns) > 2):                                                                           #Checks if the number of columns is greater than 2 and if so it becomes more complex to pull
@@ -153,19 +158,27 @@ class DataFetch:
                         data1['macroID'] = cnt                                                                          #Then add an instrument ID column that adds the value of the indexing variable of the outer for loop to the indexing of the inner for loop + 1
                         data1.to_sql('dbo_macroeconstatistics', self.engine,                                            #And finally insert the new dataframe variable into MySQL
                                      if_exists=('replace' if cnt == 1 else 'append'), index=False)
+
+                        query = 'UPDATE dbo_macroeconmaster SET accessDate={}  WHERE macroID = {}'.format(curDate, cnt)
+                        self.engine.execute(query)
                         cnt += 1
             elif (keys[n] == 'Yahoo'):
-                query = 'SELECT date, close FROM dbo_instrumentstatistics as t1 WHERE instrumentID = 6 AND ( MONTH(t1.date) = 3 and DAY(t1.date) = 31 OR MONTH(t1.date) = 6 and DAY(t1.date) = 30 or MONTH(t1.date) = 9 and DAY(t1.date) = 30 or MONTH(t1.date) = 12 and DAY(t1.date) = 31)'
+                query = 'SELECT date, close FROM ( SELECT date, close, ROW_NUMBER() OVER (PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM dbo_instrumentstatistics WHERE instrumentID = 6) z WHERE rowNum = 1' \
+                        ' AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR MONTH(z.date) = 12)'
                 data = pd.read_sql_query(query, self.engine)
-                print(data)
-
+                '''
                 #data = dr.DataReader(n, 'yahoo', '2014-12-31',end)
                 #data = data.reset_index(drop=False)
                 #data = data[['Date', 'Close']]
+                '''
                 data.rename(columns={'date' : 'date', 'close': 'statistics'}, inplace=True)
                 data['macroID'] = cnt
                 data.to_sql('dbo_macroeconstatistics', self.engine,
                             if_exists=('replace' if cnt == 1 else 'append'), index=False)
+
+                query = 'UPDATE dbo_macroeconmaster SET accessDate={}  WHERE macroID = {}'.format(curDate, cnt)
+                self.engine.execute(query)
+                cnt += 1
 
 
 
