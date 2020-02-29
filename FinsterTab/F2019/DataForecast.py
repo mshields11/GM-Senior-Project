@@ -749,7 +749,8 @@ class DataForecast:
 
     def calculate_regression(self):
         """
-            Calculate polynomial regression of the next 10 periods(day or quarters)
+            Calculate polynomial regression of the next 10 days
+            Accuracy is... questionable
         """
         # retrieve InstrumentsMaster table from database
         query = 'SELECT * FROM {}'.format(self.table_name)
@@ -789,10 +790,10 @@ class DataForecast:
             data_query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid=%s ORDER BY Date ASC' % ID
             data = pd.read_sql_query(data_query, self.engine)
 
-            # regression model from 15 previous days
-            input_length = 15
+            # regression model from previous days
+            input_length = 20
 
-            # predict 10 days ahead
+            # predict ahead
             forecast_length = 5
 
             for n in range(input_length, len(data)):
@@ -810,7 +811,6 @@ class DataForecast:
                 df = pd.DataFrame({'date': x_axis, 'close': y_axis})
                 df['date'] = pd.to_datetime(df['date'])
                 df['date'] = df['date'].map(datetime.datetime.toordinal)
-                #df['date'] = df['date'].map(datetime.datetime.fromordinal)
 
                 X = np.array(df['date'])
                 X = np.array(X)
@@ -832,6 +832,10 @@ class DataForecast:
                                        'ORDER BY date ASC LIMIT {}'.format(forecastDate, forecast_length)
 
                 future_dates = pd.read_sql_query(forecast_dates_query, self.engine)
+                # delete outdated forecasts for the next period
+                delete_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND instrumentid={} AND ' \
+                               'forecastdate>{}'.format(algoCode, ID, forecastDate)
+                self.engine.execute(delete_query)
 
                 for n in range(len(future_dates)):
                     insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ({}, {}, {}, {}, {})'
@@ -846,9 +850,8 @@ class DataForecast:
                     # populate entire table if empty
                     # or add new dates based on information in Statistics table
                     insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, 0)
+
                     self.engine.execute(insert_query)
-
-
 
     def GDPForecast(self):
         query = 'SELECT macroID FROM dbo_macroeconmaster'
