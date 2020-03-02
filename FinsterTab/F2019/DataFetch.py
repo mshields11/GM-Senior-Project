@@ -112,10 +112,10 @@ class DataFetch:
 
     def macroFetch(self):
         keys ={}
-        query = 'SELECT accessKey, accessSource FROM dbo_macroeconmaster'
+        query = 'SELECT accesssourcekey, accesssource FROM dbo_macroeconmaster'
         data = pd.read_sql_query(query, self.engine)
         for i in range(len(data)):
-            keys.update({data['accessKey'].iloc[i] : data['accessSource'].iloc[i]})
+            keys.update({data['accesssourcekey'].iloc[i] : data['accesssource'].iloc[i]})
         cnt = 1
         now = datetime.now()  # Date
         curDate = "'" + str(now) + "'"
@@ -130,11 +130,12 @@ class DataFetch:
                 if (len(data.columns) == 2):                                                                            #Checks if the number of columns is 2 as if so it is straightforward to draw the data
                     data.rename(columns={'Date': 'date', 'Value': 'statistics'}, inplace=True)                          #Renames the columns of a 2 column table
                     data.sort_values(by=['date'])                                                                       #Ensures the rows are ordered according to date
-                    data['macroID'] = cnt                                                                               #Adds a new column for the instrument ID
-                    data.to_sql('dbo_macroeconstatistics', self.engine, if_exists=('replace' if cnt == 1 else 'append'),# Inserts the data into SQL
-                                index=False, dtype={'date': sal.Date, 'statistics': sal.FLOAT, 'macroID': sal.INT})
+                    data['macroeconid'] = cnt                                                                               #Adds a new column for the instrument ID
 
-                    query = 'UPDATE dbo_macroeconmaster SET accessDate={}  WHERE macroID = {}'.format(curDate, cnt)     #Sets the access date column for the macro master table
+                    data.to_sql('dbo_macroeconstatistics', self.engine, if_exists=('replace' if cnt == 1 else 'append'),# Inserts the data into SQL
+                                index=False, dtype={'date': sal.Date, 'statistics': sal.FLOAT, 'macroeconid': sal.INT})
+
+                    query = 'UPDATE dbo_macroeconmaster SET datecreated={}  WHERE macroeconid = {}'.format(curDate, cnt)     #Sets the access date column for the macro master table
                     self.engine.execute(query)
 
                     cnt += 1
@@ -155,15 +156,15 @@ class DataFetch:
                     for j in range (len(colNewName)-1):                                                                 #For loop to loop through the dataframe variable and insert into mySQL
                         data1 = data[[colNewName[0], colNewName[j+1]]]                                                  #First we get the first column which is always date and then the first column we have yet to insert and assign it to a new dataframe variable
                         data1.rename(columns={'date': 'date', colNewName[j+1]: 'statistics'}, inplace=True)             #We then dynamically rename the column name of the new dataframe variable
-                        data1['macroID'] = cnt                                                                          #Then add an instrument ID column that adds the value of the indexing variable of the outer for loop to the indexing of the inner for loop + 1
+                        data1['macroeconid'] = cnt                                                                      #Then add an instrument ID column that adds the value of the indexing variable of the outer for loop to the indexing of the inner for loop + 1
                         data1.to_sql('dbo_macroeconstatistics', self.engine,                                            #And finally insert the new dataframe variable into MySQL
                                      if_exists=('replace' if cnt == 1 else 'append'), index=False)
 
-                        query = 'UPDATE dbo_macroeconmaster SET accessDate={}  WHERE macroID = {}'.format(curDate, cnt)
+                        query = 'UPDATE dbo_macroeconmaster SET datecreated={}  WHERE macroeconid = {}'.format(curDate, cnt)
                         self.engine.execute(query)
                         cnt += 1
             elif (keys[n] == 'Yahoo'):
-                query = 'SELECT date, close FROM ( SELECT date, close, ROW_NUMBER() OVER (PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM dbo_instrumentstatistics WHERE instrumentID = 6) z WHERE rowNum = 1' \
+                query = 'SELECT date, close FROM ( SELECT date, close, ROW_NUMBER() OVER (PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM dbo_instrumentstatistics WHERE instrumentid = 6) z WHERE rowNum = 1' \
                         ' AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR MONTH(z.date) = 12)'
                 data = pd.read_sql_query(query, self.engine)
                 '''
@@ -172,11 +173,11 @@ class DataFetch:
                 #data = data[['Date', 'Close']]
                 '''
                 data.rename(columns={'date' : 'date', 'close': 'statistics'}, inplace=True)
-                data['macroID'] = cnt
+                data['macroeconid'] = cnt
                 data.to_sql('dbo_macroeconstatistics', self.engine,
                             if_exists=('replace' if cnt == 1 else 'append'), index=False)
 
-                query = 'UPDATE dbo_macroeconmaster SET accessDate={}  WHERE macroID = {}'.format(curDate, cnt)
+                query = 'UPDATE dbo_macroeconmaster SET datecreated={}  WHERE macroeconid = {}'.format(curDate, cnt)
                 self.engine.execute(query)
                 cnt += 1
 

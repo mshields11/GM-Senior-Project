@@ -11,8 +11,7 @@ from FinsterTab.F2019.TradingSimulator import TradingSimulator
 # create database connection
 db_engine = DBEngine().mysql_engine()
 
-DataFetch.macroFetch(db_engine)
-DataForecast.MacroForecast(db_engine)
+
 
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'
@@ -28,6 +27,11 @@ master_data.get_data(ticker_symbols)
 
 # get date data and store in DateDim, replaced the SQL calendar code
 master_data.get_calendar()
+
+#Macro Economic Variable Functions
+DataFetch.macroFetch(db_engine)
+DataForecast.MacroEconIndForecast(db_engine)
+DataForecast.MacroEconCombForecast(db_engine)
 
 # calculate technical indicators and store in EngineeredFeatures
 indicators = EngineeredFeatures(db_engine, instrument_master)
