@@ -16,10 +16,8 @@ class DBEngine:
         converters.conversions = converters.encoders.copy()
         converters.conversions.update(converters.decoders)'''
 
-        conn_str = 'mysql+pymysql://root:Skipper156@localhost:3306/gmfsp_db'
+        conn_str = 'mysql+pymysql://root:password@localhost:3306/gmfsp_db'
         engine = sal.create_engine(conn_str)
         return engine
 
 # END CODE MODULE
-
-
