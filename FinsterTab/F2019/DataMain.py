@@ -1,23 +1,22 @@
 # Load other local Python modules to be used in this MAIN module
-from DataFetch import DataFetch
-from DataForecast import DataForecast
-from dbEngine import DBEngine
-from BuySell import BuySell
-from EngineeredFeatures import EngineeredFeatures
-from TradingSimulator import TradingSimulator
+from FinsterTab.F2019.DataFetch import DataFetch
+from FinsterTab.F2019.DataForecast import DataForecast
+from FinsterTab.F2019.dbEngine import DBEngine
+from FinsterTab.F2019.BuySell import BuySell
+from FinsterTab.F2019.EngineeredFeatures import EngineeredFeatures
+from FinsterTab.F2019.TradingSimulator import TradingSimulator
+
+
 
 # create database connection
 db_engine = DBEngine().mysql_engine()
 
+DataFetch.macroFetch(db_engine)
+DataForecast.MacroForecast(db_engine)
 
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'
 
-#Macro Economic Variable Functions
-DataFetch.macroFetch(db_engine)
-DataForecast.MacroEconIndForecast(db_engine)
-DataForecast.MacroEconCombForecast(db_engine)
-exit(1)
 # Get Raw Market Data
 master_data = DataFetch(db_engine, instrument_master)
 
@@ -37,9 +36,6 @@ indicators.calculate()
 # Get Raw Data from database to calculate forecasts
 forecast = DataForecast(db_engine, instrument_master)
 
-# calculate regression
-#forecast.calculate_regression()
-
 # calculate and store price predictions
 forecast.calculate_forecast()
 
@@ -57,6 +53,7 @@ forecast.calculate_svm_forecast()
 
 # calculate and store XGBoost forecast
 forecast.calculate_xgboost_forecast()
+
 
 # Get Raw Data and Technical Indicators
 signals = BuySell(db_engine, instrument_master)
@@ -87,3 +84,6 @@ simulator.combination_trade_sim()
 
 # buy and hold simulation
 simulator.buy_hold_sim()
+
+
+
