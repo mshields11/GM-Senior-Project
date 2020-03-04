@@ -1,5 +1,4 @@
 # import libraries to be used in this code module
-import numpy
 import pandas as pd
 from statsmodels.tsa.arima_model import ARIMA
 from sklearn.ensemble import RandomForestRegressor
@@ -10,12 +9,11 @@ import numpy as np
 import xgboost as xgb
 import datetime
 import sqlalchemy as sal
+from sklearn.model_selection import train_test_split    # not used at this time
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
 
-from sklearn.model_selection import train_test_split    # not used at this time
 
 # class declaration and definition
 class DataForecast:
@@ -750,7 +748,7 @@ class DataForecast:
     def calculate_regression(self):
         """
             Calculate polynomial regression of the next 10 days
-            Accuracy is... questionable
+            Algorithm is absolutely useless and the accuracy is... questionable
         """
         # retrieve InstrumentsMaster table from database
         query = 'SELECT * FROM {}'.format(self.table_name)
@@ -798,7 +796,7 @@ class DataForecast:
 
             for n in range(input_length, len(data)):
 
-                recent_data = data[n-input_length:n]
+                recent_data = data[n - input_length:n]
 
                 # get most recent trading day
                 forecastDate = "'" + str(data['date'][n]) + "'"
@@ -853,16 +851,16 @@ class DataForecast:
 
                     self.engine.execute(insert_query)
 
-    def MacroForecast(self):
-        query = 'SELECT macroID FROM dbo_macroeconmaster'
+    def MacroEconIndForecast(self):
+        query = 'SELECT macroeconid FROM dbo_macroeconmaster'
         id = pd.read_sql_query(query, self.engine)
         id = id.reset_index(drop=True)
 
-        query = 'SELECT instrumentID FROM dbo_instrumentmaster'
+        query = 'SELECT instrumentid FROM dbo_instrumentmaster'
         id2 = pd.read_sql_query(query, self.engine)
-        id2 = id2.reset_index(drop = True)
+        id2 = id2.reset_index(drop=True)
 
-        n = 9                                                                                                           # Sets value for number of datapoints you would like to work with
+        n = 9  # Sets value for number of datapoints you would like to work with
 
         GDP = []
         U = []
@@ -870,43 +868,48 @@ class DataForecast:
         M = []
         Y = []
         data = []
-        for v in id2['instrumentID']:
-            currentDate = str(datetime.date.today())                                                                    #Initiailizes a variable to represent today's date, used to fetch forecast dates
-            currentDate = ("'" + currentDate + "'")                                                                     #Applies quotes to current date so it can be read as a string
-            query = "SELECT close, instrumentID FROM dbo_instrumentstatistics WHERE instrumentid = {} " \
-                    "AND date BETWEEN '2014-03-21' AND {}".format(v, currentDate)                                       #Queries the DB to retrieve the intrumentstatistics (currently just for the S&P 500)
+        for v in id2['instrumentid']:
+            currentDate = str(
+                datetime.date.today())  # Initiailizes a variable to represent today's date, used to fetch forecast dates
+            currentDate = ("'" + currentDate + "'")  # Applies quotes to current date so it can be read as a string
 
-
-            query = "SELECT close, instrumentID FROM ( SELECT date, close, instrumentID, ROW_NUMBER() OVER " \
+            query = "SELECT close, instrumentid FROM ( SELECT date, close, instrumentID, ROW_NUMBER() OVER " \
                     "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
-                    "dbo_instrumentstatistics WHERE instrumentID = {} AND date BETWEEN '2014-03-21' AND {} ) z " \
+                    "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2014-03-21' AND {} ) z " \
                     "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
                     "MONTH(z.date) = 12)".format(v, currentDate)
 
-            df2 = pd.read_sql_query(query, self.engine)                                                                 #Executes the query and stores the result in a dataframe variable
+            df2 = pd.read_sql_query(query,
+                                    self.engine)  # Executes the query and stores the result in a dataframe variable
 
-            for x in id['macroID']:
+            for x in id['macroeconid']:
                 if x == 5:
-                    break
-                #Retrieves Relevant Data from Database
-                query = 'SELECT * FROM dbo_macroeconstatistics WHERE macroid = {}'.format(x)                            #Queries the DB to retrieeve the macoeconstatistics (currently just for GDP)
-                df = pd.read_sql_query(query, self.engine)                                                              #Executes the query and stores the result in a dataframe variable
-                macro = df.tail(n)                                                                                      #Retrieves the last n rows of the dataframe variable and stores it in GDP, a new dataframe variable
-                SP = df2.tail(n)                                                                                        #Performs same operation, this is because we only want to work with a set amount of data points for now
-                temp = df.tail(n+1)                                                                                     #Retrieves the nth + 1 row from the GDP tables so we can calculate percent change of the first GDP value
-                temp = temp.reset_index()                                                                               #Resets the index so it is easy to work with
+                    break;
+                # Retrieves Relevant Data from Database
+                query = 'SELECT * FROM dbo_macroeconstatistics WHERE macroeconid = {}'.format(
+                    x)  # Queries the DB to retrieeve the macoeconstatistics (currently just for GDP)
+                df = pd.read_sql_query(query,
+                                       self.engine)  # Executes the query and stores the result in a dataframe variable
+                macro = df.tail(
+                    n)  # Retrieves the last n rows of the dataframe variable and stores it in GDP, a new dataframe variable
+                SP = df2.tail(
+                    n)  # Performs same operation, this is because we only want to work with a set amount of data points for now
+                temp = df.tail(
+                    n + 1)  # Retrieves the nth + 1 row from the GDP tables so we can calculate percent change of the first GDP value
+                temp = temp.reset_index()  # Resets the index so it is easy to work with
 
-                #Converts macro variables to precent change
-                macroPercentChange = macro                                                                              #Creates a new dataframe variable and initializes to the GDP table of n rows
-                macro = macro.reset_index(drop=True)                                                                    #Resets the index of the GDP dataframe so it is easy to work with
-                SP = SP.reset_index(drop=True)                                                                          #Same here
-                macroPercentChange = macroPercentChange.reset_index(drop=True)                                          #And same here as well
+                # Converts macro variables to precent change
+                macroPercentChange = macro  # Creates a new dataframe variable and initializes to the GDP table of n rows
+                macro = macro.reset_index(
+                    drop=True)  # Resets the index of the GDP dataframe so it is easy to work with
+                SP = SP.reset_index(drop=True)  # Same here
+                macroPercentChange = macroPercentChange.reset_index(drop=True)  # And same here as well
 
+                for i in range(0, n):  # Creates a for loop to calculate the percent change
 
-                for i in range(0, n):                                                                                   #Creates a for loop to calculate the percent change
-
-                    if (i == 0):                                                                                        #On the first iteration grab the extra row stored in temp to compute the first GDP % change value of the table
-                        macrov = (macro['statistics'][i]-temp['statistics'][i])/temp['statistics'][i]
+                    if (
+                            i == 0):  # On the first iteration grab the extra row stored in temp to compute the first GDP % change value of the table
+                        macrov = (macro['statistics'][i] - temp['statistics'][i]) / temp['statistics'][i]
                         macroPercentChange['statistics'].iloc[i] = macrov * 100
                         if x == 1:
                             GDP.append([macro['date'].iloc[i], macrov, x])
@@ -917,8 +920,8 @@ class DataForecast:
                         elif x == 4:
                             M.append([macro['date'].iloc[i], macrov, x])
 
-                    else:                                                                                               #If it is not the first iteration then calculate % change using previous row as normal
-                        macrov = (macro['statistics'][i]-macro['statistics'][i - 1])/macro['statistics'][i - 1]
+                    else:  # If it is not the first iteration then calculate % change using previous row as normal
+                        macrov = (macro['statistics'][i] - macro['statistics'][i - 1]) / macro['statistics'][i - 1]
                         macroPercentChange['statistics'].iloc[i] = macrov * 100
                         if x == 1:
                             GDP.append([macro['date'].iloc[i], macrov, x])
@@ -928,14 +931,15 @@ class DataForecast:
                             IR.append([macro['date'].iloc[i], macrov, x])
                         elif x == 4:
                             M.append([macro['date'].iloc[i], macrov, x])
-                        #testingPercent.append([macro['date'].iloc[i], macrov, x])
+                        # testingPercent.append([macro['date'].iloc[i], macrov, x])
 
-                currentDate = datetime.date.today()                                                                     #Reinitialize currentDate variable so it is a datetime variable rather than a string
+                currentDate = datetime.date.today()  # Reinitialize currentDate variable so it is a datetime variable rather than a string
 
-                #Getting Dates for Future Forecast
-                date = []                                                                                               #Creates a list to store future forecast dates
+                # Getting Dates for Future Forecast
+                date = []  # Creates a list to store future forecast dates
                 count = 0
-                if (currentDate.month < 4):                                                                             #This will set the value of count according to which month we are in, this is to avoid having past forecast dates in the list
+                if (
+                        currentDate.month < 4):  # This will set the value of count according to which month we are in, this is to avoid having past forecast dates in the list
                     count = 0
                 elif (currentDate.month < 7 and currentDate.month >= 4):
                     count = 1
@@ -943,89 +947,195 @@ class DataForecast:
                     count = 2
                 else:
                     count = 3
-                year = currentDate.year                                                                                 #Initialize a variable to the current year
-                for i in range(n):                                                                                      #Setup a for loop to loop through and append the date list with the date of the start of the next quarter
-                                                                                                                        #For loop will run n times, corresponding to amount of data points we are working with
-                    if (count == 0):                                                                                    #If the count is 0 then we are still in the first quarter
-                        date.append(str(year) + "-03-" + "31")                                                          #Append the date list with corresponding quarter and year
-                        count += 1                                                                                      #Increase count so this date is not repeated for this year
-                    elif (count == 1):                                                                                  #Do the same for the next quarter
+                year = currentDate.year  # Initialize a variable to the current year
+                for i in range(
+                        n):  # Setup a for loop to loop through and append the date list with the date of the start of the next quarter
+                    # For loop will run n times, corresponding to amount of data points we are working with
+                    if (count == 0):  # If the count is 0 then we are still in the first quarter
+                        date.append(
+                            str(year) + "-03-" + "31")  # Append the date list with corresponding quarter and year
+                        count += 1  # Increase count so this date is not repeated for this year
+                    elif (count == 1):  # Do the same for the next quarter
                         date.append(str(year) + "-06-" + "30")
                         count += 1
-                    elif (count == 2):                                                                                  #And for the next quarter
+                    elif (count == 2):  # And for the next quarter
                         date.append(str(year) + "-09-" + "30")
                         count += 1
-                    else:                                                                                               #Until we account for the last quarter of the year
+                    else:  # Until we account for the last quarter of the year
                         date.append(str(year) + "-12-" + "31")
                         count = 0
-                        year = year + 1                                                                                 #Where we then incrament the year for the next iterations
+                        year = year + 1  # Where we then incrament the year for the next iterations
 
+                # Algorithm for forecast price
+                G, S = DataForecast.calc(self, macroPercentChange, SP,
+                                         n)  # Calculates the average GDP and S&P values for the given data points over n days and performs operations on GDP average
 
-                #Algorithm for forecast price
-                G, S = DataForecast.calc(self, macroPercentChange, SP, n)                                               #Calculates the average GDP and S&P values for the given data points over n days and performs operations on GDP average
+                # Insert forecast values into database
+                # Initialize a list to store the values for each column
+                for i in range(
+                        n):  # Setsup a for loop to calculate the final forecast price and add data to the list variable data
+                    if x in [2, 3, 4]:
+                        S = (S * (-G)) + S
+                    else:
+                        S = (S * (G * 2)) + S
+                    # S = (S*((G+1)**n))
+                    data.append(
+                        [date[i], SP['instrumentid'][i], macroPercentChange['macroeconid'][i], S, 'macroIND',
+                         0])  # Column organization setup according to dbo_macroeconforecast
 
+        table = pd.DataFrame(data, columns=['forecastdate', 'instrumentid', 'macroeconid',
+                                            'forecastprice', 'algorithmcode',
+                                            'prederror'])  # Convert data list to dataframe variable
 
-                #Insert forecast values into database
-                                                                                                                        #Initialize a list to store the values for each column
-                for i in range(n):                                                                                      #Setsup a for loop to calculate the final forecast price and add data to the list variable data
-                    S = (S * G) + S
-                    #S = (S*((G+1)**n))
-                    data.append([date[i], S, macroPercentChange['macroID'][i], SP['instrumentID'][i]])                  #Column organization setup according to dbo_macroeconforecast
-
-
-        table = pd.DataFrame(data, columns=['date', 'forecastPrice', 'macroID',
-                                            'instrumentID'])  # Convert data list to dataframe variable
-
-        table.to_sql('dbo_macroeconforecast', self.engine, if_exists=('replace'),
-                     index=False, dtype={'date': sal.Date, 'forecastPrice': sal.FLOAT,
-                                         'macroid': sal.INT})  # Insert dataframe variable into SQL database
+        table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('replace'),
+                     index=False)
 
     def calc(self, df1, df2, n):
         G = 0
         S = 0
-        for i in range(n):                                                                                              #Calculates average Macro Variable % change and S&P closing prices over past n days
+        for i in range(n):  # Calculates average Macro Variable % change and S&P closing prices over past n days
             G = df1['statistics'][i] + G
             S = df2['close'][i] + S
         G = G / n
-        S = S / n                                                                                                       #Divide percent change by 2
-        G = G / 100                                                                                                     #Then convert from percent to number
-        return G,S                                                                                                      #And return both values
+        S = S / n  # Divide percent change by 2
+        G = G / 100  # Then convert from percent to number
+        return G, S  # And return both values
 
-    def MacroRegressionForecast(self):
-        GDP = []
-        U = []
-        IR = []
-        M = []
-        Y = []
+    def MacroEconCombForecast(self):
+        keys = {}
+        query = 'SELECT macroeconid, macroeconname FROM dbo_macroeconmaster'
+        data = pd.read_sql_query(query, self.engine)
+        vars = {}
+        for i in data['macroeconname']:
+            if i != '30 Year Bond Yield':
+                d = {i: []}
+                vars.update(d)
+        # (vars)
+        query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
+        data1 = pd.read_sql_query(query, self.engine)
+        ikeys = {}
+        result = {}
+        for i in data1['instrumentid']:
+            d = {i: []}
+            result.update(d)
 
+        currentDate = str(
+            datetime.date.today())  # Initiailizes a variable to represent today's date, used to fetch forecast dates
+        currentDate = ("'" + currentDate + "'")
+
+        n = 8
+        for i in range(len(data)):
+            keys.update({data['macroeconname'].iloc[i]: data['macroeconid'].iloc[i]})
+
+        for x in range(len(data1)):
+            ikeys.update({data1['instrumentname'].iloc[x]: data1['instrumentid'].iloc[x]})
+
+        for x in ikeys:
+            for i in keys:
+                if i in vars:
+                    query = 'SELECT date, statistics, macroeconid FROM dbo_macroeconstatistics WHERE macroeconid = {}'.format(
+                        keys[i])
+                    data = pd.read_sql_query(query, self.engine)
+
+                    # For loop to retrieve macro statistics and calculate percent change
+                    for j in range(n):
+                        temp = data.tail(n + 1)
+                        data = data.tail(n)
+                        if j == 0:
+                            macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / \
+                                     temp['statistics'].iloc[0]
+                            vars[i].append(macrov)
+                        else:
+                            macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j - 1]) / \
+                                     data['statistics'].iloc[j - 1]
+                            vars[i].append(macrov)
+
+            query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
+                    "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
+                    "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2014-03-21' AND {} ) z " \
+                    "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
+                    "MONTH(z.date) = 12)".format(ikeys[x], currentDate)
+            instrumentStats = pd.read_sql_query(query, self.engine)
+            # print(instrumentStats)
+            instrumentStats = instrumentStats.tail(n)
+            Y = []
+            for i in range(n):
+                stat = vars['GDP'][i] * 1.9 - (
+                            vars['Unemployment Rate'][i] * .4 + vars['Inflation Rate'][i] * .3) - (
+                                   vars['Misery Index'][i] * vars['Misery Index'][i])
+                stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
+                Y.append(stat)
+            result[ikeys[x]].append(Y)
+            # print(result)
+
+        # Getting Dates for Future Forecast
+        currentDate = datetime.date.today()
+        date = []  # Creates a list to store future forecast dates
+        count = 0
+        if (
+                currentDate.month < 4):  # This will set the value of count according to which month we are in, this is to avoid having past forecast dates in the list
+            count = 0
+        elif (currentDate.month < 7 and currentDate.month >= 4):
+            count = 1
+        elif (currentDate.month < 10 and currentDate.month >= 7):
+            count = 2
+        else:
+            count = 3
+        year = currentDate.year  # Initialize a variable to the current year
+        for i in range(
+                n):  # Setup a for loop to loop through and append the date list with the date of the start of the next quarter
+            # For loop will run n times, corresponding to amount of data points we are working with
+            if (count == 0):  # If the count is 0 then we are still in the first quarter
+                date.append(str(year) + "-03-" + "31")  # Append the date list with corresponding quarter and year
+                count += 1  # Increase count so this date is not repeated for this year
+            elif (count == 1):  # Do the same for the next quarter
+                date.append(str(year) + "-06-" + "30")
+                count += 1
+            elif (count == 2):  # And for the next quarter
+                date.append(str(year) + "-09-" + "30")
+                count += 1
+            else:  # Until we account for the last quarter of the year
+                date.append(str(year) + "-12-" + "31")
+                count = 0
+                year = year + 1  # Where we then incrament the year for the next iterations
+        # print(date)
+        table = []
+        for i, k in result.items():
+            cnt = 0
+            for j in k:
+                for l in range(n):
+                    table.append([date[cnt], i, 1234, j[cnt], 'macroCOMB', 0])
+                    cnt += 1
+
+        table = pd.DataFrame(table, columns=['forecastdate', 'instrumentid', 'macroeconid',
+                                             'forecastprice', 'algorithmcode', 'prederror'])
+
+        table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('append'), index=False)
+
+        '''
         M = pd.DataFrame(M, columns=['date', 'statistics', 'macroID'])
         GDP = pd.DataFrame(GDP, columns=['date', 'statistics', 'macroID'])
         IR = pd.DataFrame(IR, columns=['date', 'statistics', 'macroID'])
         U = pd.DataFrame(U, columns=['date', 'statistics', 'macroID'])
-
         #query = "SELECT close FROM dbo_instrumentstatistics WHERE instrumentid = 3 AND date = {}".format()
         for i in range(n):
             Y.append((GDP['statistics'].iloc[i]*1.9) - (U['statistics'].iloc[i]*.4 + IR['statistics'].iloc[i] *.3) - (M['statistics'].iloc[i] * M['statistics'].iloc[i]))
         print(Y)
+        '''
+
+        '''
         x_PR = np.array([i for i in range(len(Y))])
-
-
         #Polynomial regression
         x_axis = x_PR
         y_axis = Y
-
         df = pd.DataFrame({'date': x_axis, 'percent': y_axis})
-
         X = np.array(pd.to_datetime(df['date']), dtype=float)
         X = np.array(X)
         X = X.reshape(-1,1)
         y = np.array(df['percent'])
-
         X = np.array([i for i in range(len(Y))])
         X = X.reshape(-1, 1)
-
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
-
         poly_reg = PolynomialFeatures(degree=3)
         X_poly = poly_reg.fit_transform(X)
         pol_reg = LinearRegression()
@@ -1037,5 +1147,6 @@ class DataForecast:
         plt.xlabel('Date')
         plt.ylabel('Percentage Change')
         plt.show()
+        '''
 
 # END CODE MODULE

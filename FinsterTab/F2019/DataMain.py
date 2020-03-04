@@ -9,12 +9,15 @@ from TradingSimulator import TradingSimulator
 # create database connection
 db_engine = DBEngine().mysql_engine()
 
-DataFetch.macroFetch(db_engine)
-DataForecast.MacroForecast(db_engine)
 
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'
 
+#Macro Economic Variable Functions
+DataFetch.macroFetch(db_engine)
+DataForecast.MacroEconIndForecast(db_engine)
+DataForecast.MacroEconCombForecast(db_engine)
+exit(1)
 # Get Raw Market Data
 master_data = DataFetch(db_engine, instrument_master)
 
