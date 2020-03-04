@@ -10,7 +10,11 @@ from TradingSimulator import TradingSimulator
 db_engine = DBEngine().mysql_engine()
 
 DataFetch.macroFetch(db_engine)
+<<<<<<< HEAD
+DataForecast.MacroForecast(db_engine)
+=======
 # DataFetch.GDPForecast(db_engine)
+>>>>>>> master
 
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'

@@ -19,7 +19,7 @@ class DataFetch:
         self.engine = engine
         self.table_name = table_name
         self.datasource = 'yahoo'
-        self.datalength = 1096    # last 3 years, based on actual calendar days of 365
+        self.datalength = 2192    # last 6 years, based on actual calendar days of 365
 
     def get_datasources(self):
         """
@@ -78,9 +78,9 @@ class DataFetch:
         truncate_query = 'TRUNCATE TABLE dbo_datedim'
         self.engine.execute(truncate_query)
 
-        # 3 years of past data and up to 50 days of future forecasts
+        # 3 years of past data and up to 1 year of future forecasts
         begin = date.today() - timedelta(days=self.datalength)
-        end = date.today() + timedelta(days=50)
+        end = date.today() + timedelta(days=365)
 
         # list of US holidays
         cal = get_calendar('USFederalHolidayCalendar')  # Create calendar instance
@@ -111,6 +111,92 @@ class DataFetch:
             self.engine.execute(date_query)
 
     def macroFetch(self):
+<<<<<<< HEAD
+        keys = {}
+        query = 'SELECT accesssourcekey, accesssource FROM dbo_macroeconmaster'
+        data = pd.read_sql_query(query, self.engine)
+        for i in range(len(data)):
+            keys.update({data['accesssourcekey'].iloc[i]: data['accesssource'].iloc[i]})
+        cnt = 1
+        now = datetime.now()  # Date
+        curDate = "'" + str(now) + "'"
+        end = now.strftime("%Y-%m-%d")
+        for n in keys:
+
+            if (keys[n] == 'Quandl'):
+                data = quandl.get(n, authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31",
+                                  # Retrieves data source corresponding to var[n]
+                                  end_date="2020-02-05")
+                data = data.reset_index()  # Resets the index so easier to work with
+
+                if (len(
+                        data.columns) == 2):  # Checks if the number of columns is 2 as if so it is straightforward to draw the data
+                    data.rename(columns={'Date': 'date', 'Value': 'statistics'},
+                                inplace=True)  # Renames the columns of a 2 column table
+                    data.sort_values(by=['date'])  # Ensures the rows are ordered according to date
+                    data['macroeconid'] = cnt  # Adds a new column for the instrument ID
+
+                    data.to_sql('dbo_macroeconstatistics', self.engine, if_exists=('replace' if cnt == 1 else 'append'),
+                                # Inserts the data into SQL
+                                index=False, dtype={'date': sal.Date, 'statistics': sal.FLOAT, 'macroeconid': sal.INT})
+
+                    query = 'UPDATE dbo_macroeconmaster SET datecreated={}  WHERE macroeconid = {}'.format(curDate,
+                                                                                                           cnt)  # Sets the access date column for the macro master table
+                    self.engine.execute(query)
+
+                    cnt += 1
+
+                elif (len(
+                        data.columns) > 2):  # Checks if the number of columns is greater than 2 and if so it becomes more complex to pull
+
+                    colName = list(data.columns)  # Create a list of the column names from the data drawn
+                    colNewName = list(
+                        data.columns)  # Create a list of the column names but to be used to store new column names
+                    for x in range(len(colName)):  # Loops through the colName list
+                        if x == 0:  # The first column will always be date, so we set the first index value to 'date'
+                            colNewName[x] = 'date'
+                        else:  # Otherwise we rename the columns statistic + the number of the column
+                            colNewName[x] = 'statistics' + str(
+                                x)  # This allows us to differentiate rows and dynamically insert the data into mySQL
+
+                    for l in range(len(colName)):
+                        data.rename(columns={colName[l]: colNewName[l]},
+                                    inplace=True)  # This then actually renames the columns of the dataframe variable
+
+                    for j in range(len(
+                            colNewName) - 1):  # For loop to loop through the dataframe variable and insert into mySQL
+                        data1 = data[[colNewName[0], colNewName[
+                            j + 1]]]  # First we get the first column which is always date and then the first column we have yet to insert and assign it to a new dataframe variable
+                        data1.rename(columns={'date': 'date', colNewName[j + 1]: 'statistics'},
+                                     inplace=True)  # We then dynamically rename the column name of the new dataframe variable
+                        data1[
+                            'macroeconid'] = cnt  # Then add an instrument ID column that adds the value of the indexing variable of the outer for loop to the indexing of the inner for loop + 1
+                        data1.to_sql('dbo_macroeconstatistics', self.engine,
+                                     # And finally insert the new dataframe variable into MySQL
+                                     if_exists=('replace' if cnt == 1 else 'append'), index=False)
+
+                        query = 'UPDATE dbo_macroeconmaster SET datecreated={}  WHERE macroeconid = {}'.format(curDate,
+                                                                                                               cnt)
+                        self.engine.execute(query)
+                        cnt += 1
+            elif (keys[n] == 'Yahoo'):
+                query = 'SELECT date, close FROM ( SELECT date, close, ROW_NUMBER() OVER (PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM dbo_instrumentstatistics WHERE instrumentid = 6) z WHERE rowNum = 1' \
+                        ' AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR MONTH(z.date) = 12)'
+                data = pd.read_sql_query(query, self.engine)
+                '''
+                #data = dr.DataReader(n, 'yahoo', '2014-12-31',end)
+                #data = data.reset_index(drop=False)
+                #data = data[['Date', 'Close']]
+                '''
+                data.rename(columns={'date': 'date', 'close': 'statistics'}, inplace=True)
+                data['macroeconid'] = cnt
+                data.to_sql('dbo_macroeconstatistics', self.engine,
+                            if_exists=('replace' if cnt == 1 else 'append'), index=False)
+
+                query = 'UPDATE dbo_macroeconmaster SET datecreated={}  WHERE macroeconid = {}'.format(curDate, cnt)
+                self.engine.execute(query)
+                cnt += 1
+=======
         vars = ["FRBP/GDPPLUS", "USMISERY/INDEX"]                                                                       #Hardcoded Quandl keys used to retrieve data from Quandl
         for n in range (len(vars)):
             data = quandl.get(vars[n], authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31",                       #Retrieves data source corresponding to var[n]
@@ -165,5 +251,6 @@ class DataFetch:
     #         query = 'SELECT * FROM dbo_instrumentstatistics WHERE date = %s' % firstQuarter
     #         df = pd.read_sql_query(query, self.engine)
     #         print(df)
+>>>>>>> master
 
 # END CODE MODULE
