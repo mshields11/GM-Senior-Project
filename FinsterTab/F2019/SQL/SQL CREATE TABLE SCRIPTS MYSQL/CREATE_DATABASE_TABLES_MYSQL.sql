@@ -146,32 +146,33 @@ values (1 , 'GM'   , 'Equity' , 'YAHOO'),
 
 drop table if exists dbo_macroeconmaster;  
 create table dbo_macroeconmaster(
-macroeconid            int null,
+macroeconcode          varchar(10) null,
 macroeconname          varchar(50) null,
 accesssourcekey        varchar(50) null,
 accesssource		   varchar(50) null,
-datecreated			   date
+datecreated			   date,
+activecode			   varchar(10) null
 );
 
 insert into dbo_macroeconmaster
-values (1 , 'GDP'   , 'FRED/NGDPPOT', 'Quandl', 0),
-	   (2 , 'Unemployment Rate'  , 'USMISERY/INDEX', 'Quandl', 0),
-	   (3 , 'Inflation Rate'  , 'USMISERY/INDEX', 'Quandl', 0),
-	   (4 , 'Misery Index'  , 'USMISERY/INDEX', 'Quandl', 0),
-       (5, '30 Year Bond Yield', '^TYX', 'Yahoo', 0)
+values ('GDP' , 'GDP'   , 'FRED/NGDPPOT', 'Quandl', 0, 'A'),
+	   ('UR' , 'Unemployment Rate'  , 'USMISERY/INDEX', 'Quandl', 0, 'A'),
+	   ('IR' , 'Inflation Rate'  , 'USMISERY/INDEX', 'Quandl', 0, 'A'),
+	   ('MI' , 'Misery Index'  , 'USMISERY/INDEX', 'Quandl', 0, 'A'),
+       ('TYX', '30 Year Bond Yield', '^TYX', 'Yahoo', 0, 'I')
 ;
 
 DROP TABLE IF EXISTS dbo_macroeconstatistics;
 CREATE TABLE dbo_macroeconstatistics (
 	date			date,
 	statistics		int,
-    macroeconid		int null);
+    macroeconcode	varchar(10) null);
 
 DROP TABLE IF EXISTS dbo_macroeconalgorithmforecast;
 CREATE TABLE dbo_macroeconalgorithmforecast(
 forecastdate            date null,
 instrumentid            int  null,
-macroeconid				int null,
+macroeconcode			varchar(10) null,
 forecastprice           float null,
 algorithmcode           varchar(50) null,
 prederror               float null
