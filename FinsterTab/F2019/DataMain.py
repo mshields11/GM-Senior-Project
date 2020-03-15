@@ -32,6 +32,8 @@ master_data.get_calendar()
 DataFetch.macroFetch(db_engine)
 DataForecast.MacroEconIndForecast(db_engine)
 DataForecast.MacroEconCombForecast(db_engine)
+DataForecast.calculate_accuracy_train(db_engine)
+DataForecast.calculate_accuracy_comb(db_engine)
 
 # calculate technical indicators and store in EngineeredFeatures
 indicators = EngineeredFeatures(db_engine, instrument_master)

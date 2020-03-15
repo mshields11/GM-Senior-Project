@@ -159,7 +159,7 @@ class DataFetch:
                     for j in range (len(colNewName)-1):                                                                 #For loop to loop through the dataframe variable and insert into mySQL
                         data1 = data[[colNewName[0], colNewName[j+1]]]                                                  #First we get the first column which is always date and then the first column we have yet to insert and assign it to a new dataframe variable
                         data1.rename(columns={'date': 'date', colNewName[j+1]: 'statistics'}, inplace=True)             #We then dynamically rename the column name of the new dataframe variable
-                        data1['macroeconcode'] = mec['macroeconcode'][cnt]                                                                      #Then add an instrument ID column that adds the value of the indexing variable of the outer for loop to the indexing of the inner for loop + 1
+                        data1['macroeconcode'] = mec['macroeconcode'][cnt]                                              #Then add an instrument ID column that adds the value of the indexing variable of the outer for loop to the indexing of the inner for loop + 1
                         data1.to_sql('dbo_macroeconstatistics', self.engine,                                            #And finally insert the new dataframe variable into MySQL
                                      if_exists=('replace' if cnt == 0 else 'append'), index=False)
 
