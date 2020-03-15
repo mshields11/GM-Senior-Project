@@ -980,9 +980,11 @@ class DataForecast:
 
         query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
         data1 = pd.read_sql_query(query, self.engine)
+        ids = []
         ikeys = {}
         result = {}
         for i in data1['instrumentid']:
+            ids.append(i)
             d = {i: []}
             result.update(d)
         """init"""
@@ -1020,7 +1022,7 @@ class DataForecast:
 
             return pd.read_sql_query(query, self.engine)
         """ run on each indicator ?"""
-        for v in range(1, 7):
+        for v in ids:
             start_date = date_ranges['train']['start']
             end_date = date_ranges['train']['end']
             df2 = get_data(v, start_date, end_date)
@@ -1235,7 +1237,7 @@ class DataForecast:
                     macroPercentChange['statistics'].iloc[i] = macrov * 100.0
                     #print(macrov)
                     indicators[str(x)].append([macro['date'].iloc[i], macrov, x])
-                    print(indicators[str(x)])
+
                 """ gen forecast dates """
                 currentDate = date_ranges['test']['start']
                 dates = []
