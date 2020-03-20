@@ -10,6 +10,7 @@ import xgboost as xgb
 import calendar
 import datetime
 from datetime import timedelta, datetime
+import FinsterTab.F2019.AccuracyTest
 import sqlalchemy as sal
 from sklearn.model_selection import train_test_split    # not used at this time
 from sklearn.linear_model import LinearRegression
@@ -51,7 +52,6 @@ class DataForecast:
             algoName = "'PricePrediction'"
             insert_code_query = 'INSERT INTO dbo_algorithmmaster VALUES({},{})'.format(algoCode, algoName)
             self.engine.execute(insert_code_query)
-
         # loop through each ticker symbol
         for ID in df['instrumentid']:
 
@@ -194,6 +194,7 @@ class DataForecast:
                                 highfrllinelong - (highfrllinelong * 0.01)) and decrease <= l_ema:
                             decrease += 1.5 * std_days
                             forecast.append(decrease)
+
                     x = x + 1
 
                 # if the momentum is positive
@@ -242,6 +243,7 @@ class DataForecast:
 
                 # predicted values error is 0 because the actual close prices for the future is not available
                 predError = 0
+
                 insert_query = insert_query.format(forecastDateStr, ID, forecast[i], algoCode, predError)
                 self.engine.execute(insert_query)
 
@@ -857,6 +859,7 @@ class DataForecast:
 
 
 
+
     def MacroEconCombForecast(self):
         keys = {}
         query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
@@ -865,7 +868,6 @@ class DataForecast:
         for i in data['macroeconname']:
             d = {i: []}
             vars.update(d)
-        #(vars)
         query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
         data1 = pd.read_sql_query(query, self.engine)
         ikeys = {}
@@ -873,7 +875,7 @@ class DataForecast:
         for i in data1['instrumentid']:
             d = {i: []}
             result.update(d)
-
+        weightings = FinsterTab.F2019.AccuracyTest.create_weightings(self.engine)
         currentDate = str(datetime.today())                                                                        # Initiailizes a variable to represent today's date, used to fetch forecast dates
         currentDate = ("'" + currentDate + "'")
 
@@ -912,8 +914,9 @@ class DataForecast:
             instrumentStats = instrumentStats.tail(n)
 
             Y = []
+
             for i in range(n):
-                stat = vars['GDP'][i] * 1.9 - (vars['Unemployment Rate'][i] * .4 + vars['Inflation Rate'][i] * .3) - (vars['Misery Index'][i] * vars['Misery Index'][i])
+                stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['Unemployment Rate'][i] * weightings[ikeys[x]][1] + vars['Inflation Rate'][i] * weightings[ikeys[x]][2]) - (vars['Misery Index'][i] * vars['Misery Index'][i])
                 stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
                 Y.append(stat)
             result[ikeys[x]].append(Y)
@@ -961,383 +964,6 @@ class DataForecast:
 
         table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('append'), index=False)
 
-    def calculate_accuracy_comb(self):
-        keys = {}
-        query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
-        data = pd.read_sql_query(query, self.engine)
-        vars = {}
-        codes = []
-        indicators = {}
-        for i in range(len(data['macroeconcode'])):
-            codes.append(data['macroeconcode'].loc[i])
-            d = {data['macroeconcode'].loc[i]: []}
-            indicators.update(d)
-
-        for i in data['macroeconname']:
-            if i != '30 Year Bond Yield':
-                d = {i: []}
-                vars.update(d)
-
-        query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
-        data1 = pd.read_sql_query(query, self.engine)
-        ids = []
-        ikeys = {}
-        result = {}
-        for i in data1['instrumentid']:
-            ids.append(i)
-            d = {i: []}
-            result.update(d)
-        """init"""
-        n = 8
-
-        #indicators = {
-        #    '1': [], '2': [], '3': [], '4': []
-        #}
-        data = []
-        """ set test ranges """
-        date_now = datetime.now()
-        date_start = datetime(2014, 3, 5)
-        date_range = (date_now - date_start).days
-        date_range_split = date_start+timedelta(days=int(date_range*.70))
-
-        date_ranges = {
-            'train': {
-                'start': date_start,
-                'end': date_range_split  - timedelta(days=220)
-            },
-            'test': {
-                'start': date_range_split + timedelta(days=1)  - timedelta(days=220),
-                'end': date_now - timedelta(days=220)
-            }
-        }
-        """ anon function to get data """
-        def get_data(v, start_date, end_date):
-            query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentID, ROW_NUMBER() OVER " \
-                    "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
-                    "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '{}' AND '{}' ) z " \
-                    "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
-                    "MONTH(z.date) = 12)".format(
-                        v,
-                        start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
-
-            return pd.read_sql_query(query, self.engine)
-        """ run on each indicator ?"""
-        for v in ids:
-            start_date = date_ranges['train']['start']
-            end_date = date_ranges['train']['end']
-            df2 = get_data(v, start_date, end_date)
-
-            for x in codes:
-                query = """
-                    SELECT * FROM dbo_macroeconstatistics
-                    WHERE macroeconcode = {}
-                    AND
-                    date BETWEEN '{}' AND '{}'
-                    """.format(
-                        '"' + str(x) + '"',
-                        start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
-                df = pd.read_sql_query(query, self.engine)
-
-                """ sample last n points"""
-                macro = df.tail(n)
-                                                                                                           #Retrieves the last n rows of the dataframe variable and stores it in GDP, a new dataframe variable
-                SP = df2.tail(n)
-                                                                                                             #Performs same operation, this is because we only want to work with a set amount of data points for now
-                temp = df.tail(n+1)                                                                                     #Retrieves the nth + 1 row from the GDP tables so we can calculate percent change of the first GDP value
-                temp = temp.reset_index()                                                                               #Resets the index so it is easy to work with
-                """ calc pct_change """
-
-                macroPercentChange = macro                                                                              #Creates a new dataframe variable and initializes to the GDP table of n rows
-                macro = macro.reset_index(drop=True)                                                                    #Resets the index of the GDP dataframe so it is easy to work with
-                SP = SP.reset_index(drop=True)                                                                          #Same here
-                macroPercentChange = macroPercentChange.reset_index(drop=True)
-
-                for i in range(0, n):                                                                                   #Creates a for loop to calculate the percent change
-                    if (i == 0):                                                                                        #On the first iteration grab the extra row stored in temp to compute the first GDP % change value of the table
-                        macrov = (macro['statistics'][i]-temp['statistics'][i])/temp['statistics'][i]
-                    else:                                                                                               #If it is not the first iteration then calculate % change using previous row as normal
-                        macrov = (macro['statistics'][i]-macro['statistics'][i - 1])/macro['statistics'][i - 1]
-                    macroPercentChange['statistics'].iloc[i] = macrov * 100.0
-
-                    indicators[str(x)].append([macro['date'].iloc[i], macrov, x])
-
-                """ gen forecast dates """
-                currentDate = date_ranges['test']['start']
-                dates = []
-                def add_months(sourcedate, months):
-                    month = sourcedate.month - 1 + months
-                    year = sourcedate.year + month // 12
-                    month = month % 12 + 1
-                    day = calendar.monthrange(year, month)[1]
-                    return datetime(year, month, day)
-                for i in range(n):
-                    currentDate = add_months(currentDate, 3)
-                    dates.append(currentDate.strftime('%Y-%m-%d'))
-
-                """ forecasting """
-            Y = []
-
-            for i in range(n):
-                query = 'SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster'
-                data = pd.read_sql_query(query, self.engine)
-                for i in range(len(codes)):
-                    if i != '30 Year Bond Yield':
-                        stat = (indicators[codes[0]][i][1] * 1.9) - (indicators[codes[1]][i][1] * .4)
-                        + (indicators[codes[2]][i][1] * .3)
-                        - (indicators[codes[3]][i][1] * indicators[codes[3]][i][1])
-                        stat = (stat * df2['close'].iloc[i]) + df2['close'].iloc[i]
-                        prediction_error = 0
-                #stat = [dates[i], SP['instrumentid'][i], macroPercentChange['macroeconid'][i], S, 'macroCOMB', prediction_error]
-                        Y.append(stat)
-            #print(Y)
-            df = pd.DataFrame(Y, columns=['close'])
-
-
-        #df = pd.DataFrame(Y, columns=['date','instrument_id' , 'macro_econ_id', 'close', 'algorithmcode', 'e'])
-        #print(df)
-        #pd.set_option('display.max_rows', df.shape[0]+1)
-        #print(df)aFrame(Y, columns=['date','instrument_id' , 'macro_econ_id', 'close', 'algorithmcode', 'e'])
-        #print(df)
-
-        # """Percent Error Calculation"""
-        # for v in range(1, 7):
-        #
-        #     start_date = date_ranges['test']['start']
-        #
-        #     end_date = date_ranges['test']['end']
-        #     currentDate = date_ranges['test']['start']
-        #
-        #     dates = []
-        # def add_months(sourcedate, months):
-        #     month = sourcedate.month - 1 + months
-        #     year = sourcedate.year + month // 12
-        #     month = month % 12 + 1
-        #     day = calendar.monthrange(year, month)[1]
-        #     return (datetime(year, month, day))
-        # for i in range(n):
-        #     currentDate = add_months(currentDate, 3)
-        #     dates.append(currentDate.strftime('%Y-%m-%d'))
-        #
-        #
-        #     "Selecting actual close prices corresponding to forecasted dates"
-        #     for v in range(1,7):
-        #         query = """
-        #         SELECT date, close, instrumentid FROM dbo_instrumentstatistics
-        #         WHERE instrumentid = {}
-        #         AND
-        #         date = '{}'
-        #         """.format(
-        #         v,
-        #         currentDate.strftime('%Y-%m-%d'))
-        #         actual_df = pd.read_sql_query(query, self.engine)
-        #
-        #
-        #         "Converting dates to lists for smooth comparison"
-        #         #actual_list = actual_df['date'].tolist()
-        #         #forecast_date_list = df['date'].tolist()
-        #         "Converting time series to string"
-        #         actual_date = actual_df['date']
-        #         forecast_date = df['date']
-        #         string_actual = actual_date.to_string()
-        #
-        #         string_forecast = forecast_date.to_string()
-        #
-        #
-        #
-        #         "Converting close prices to list"
-        #         forecast_close = df['close'].tolist()
-        #         actual_close = actual_df['close'].tolist()
-        #
-        #         #storing percent error in array
-        #         percent_error = []
-        #         "Comparing forecasted and actual dates and calculating absolute percent error"
-        #         if string_actual != string_forecast:
-        #             percent_error = [(actual_close - forecast_close)  / (actual_close) for actual_close, forecast_close in zip(actual_close, forecast_close)]
-        #             absolute_percent_error = [abs(ele) for ele in percent_error]
-        #             "Print percent error for each instrument"
-        #             #print("Date: " + string_actual)
-        #             print(absolute_percent_error)
-        #             #print(len(absolute_percent_error))
-
-
-    def calculate_accuracy_train(self):
-        """init"""
-        n = 9
-        query = "SELECT macroeconcode FROM dbo_macroeconmaster WHERE activecode = 'A'"
-        data = pd.read_sql_query(query, self.engine)
-        codes = []
-        indicators = {}
-        for i in range(len(data['macroeconcode'])):
-            codes.append(data['macroeconcode'].loc[i])
-            d = {data['macroeconcode'].loc[i]: []}
-            indicators.update(d)
-        data = []
-        """ set test ranges """
-        date_now = datetime.now()
-        date_start = datetime(2014, 3, 5)
-        date_range = (date_now - date_start).days
-        date_range_split = date_start+timedelta(days=int(date_range*.70))
-        date_ranges = {
-            'train': {
-                'start': date_start,
-                'end': date_range_split  - timedelta(days=220)
-            },
-            'test': {
-                'start': date_range_split + timedelta(days=1)  - timedelta(days=220),
-                'end': date_now - timedelta(days=220)
-            }
-        }
-        """ anon function to get data """
-        def get_data(v, start_date, end_date):
-            query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentID, ROW_NUMBER() OVER " \
-                    "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
-                    "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '{}' AND '{}' ) z " \
-                    "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
-                    "MONTH(z.date) = 12)".format(
-                        v,
-                        start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
-
-            return pd.read_sql_query(query, self.engine)
-        """ run on each indicator ?"""
-        for v in range(1, 7):
-            start_date = date_ranges['train']['start']
-            end_date = date_ranges['train']['end']
-            df2 = get_data(v, start_date, end_date)
-            #print(df2)
-            #print(df2)
-            for x in codes:
-                query = """
-                    SELECT * FROM dbo_macroeconstatistics
-                    WHERE macroeconcode = {}
-                    AND
-                    date BETWEEN '{}' AND '{}'
-                    """.format(
-                        '"' + str(x) + '"',
-                        start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
-                df = pd.read_sql_query(query, self.engine)
-                #print(df)                                                            #Executes the query and stores the result in a dataframe variable
-                """ sample last n points"""
-                macro = df.tail(n)
-                #print(macro)                                                                                     #Retrieves the last n rows of the dataframe variable and stores it in GDP, a new dataframe variable
-                SP = df2.tail(n)
-                #print(SP)                                                                                      #Performs same operation, this is because we only want to work with a set amount of data points for now
-                temp = df.tail(n+1)                                                                                     #Retrieves the nth + 1 row from the GDP tables so we can calculate percent change of the first GDP value
-                temp = temp.reset_index()                                                                               #Resets the index so it is easy to work with
-                """ calc pct_change """
-                # print(macro.pct_change())
-                macroPercentChange = macro                                                                              #Creates a new dataframe variable and initializes to the GDP table of n rows
-                macro = macro.reset_index(drop=True)                                                                    #Resets the index of the GDP dataframe so it is easy to work with
-                SP = SP.reset_index(drop=True)                                                                          #Same here
-                macroPercentChange = macroPercentChange.reset_index(drop=True)                                          #And same here as well
-                for i in range(0, n):                                                                                   #Creates a for loop to calculate the percent change
-                    if (i == 0):                                                                                        #On the first iteration grab the extra row stored in temp to compute the first GDP % change value of the table
-                        macrov = (macro['statistics'][i]-temp['statistics'][i])/temp['statistics'][i]
-                    else:                                                                                               #If it is not the first iteration then calculate % change using previous row as normal
-                        macrov = (macro['statistics'][i]-macro['statistics'][i - 1])/macro['statistics'][i - 1]
-                    macroPercentChange['statistics'].iloc[i] = macrov * 100.0
-                    #print(macrov)
-                    indicators[str(x)].append([macro['date'].iloc[i], macrov, x])
-
-                """ gen forecast dates """
-                currentDate = date_ranges['test']['start']
-                dates = []
-                def add_months(sourcedate, months):
-                    month = sourcedate.month - 1 + months
-                    year = sourcedate.year + month // 12
-                    month = month % 12 + 1
-                    day = calendar.monthrange(year, month)[1]
-                    return datetime(year, month, day)
-                for i in range(n):
-                    currentDate = add_months(currentDate, 3)
-                    dates.append(currentDate.strftime('%Y-%m-%d'))
-                    #print(currentDate)
-                """ forecasting """
-                G, S = DataForecast.calc(self, macroPercentChange, SP, n)
-                for i in range(n):
-                    if x in [2, 3, 4]:
-                        S = (S * (-G)) + S
-                    else:
-                        S = (S * (G*2)) + S
-                    prediction_error = 0
-                    row = [dates[i], SP['instrumentid'][i], macroPercentChange['macroeconcode'][i], S, 'macroIND', prediction_error]
-                    data.append(row)
-        df = pd.DataFrame(data, columns=['date','instrument_id' , 'macro_econ_id', 'close', 'algorithmcode', 'e'])
-
-
-
-        """ Percent Error Calculation """
-        for v in range(1, 7):
-
-            start_date = date_ranges['test']['start']
-
-            end_date = date_ranges['test']['end']
-            currentDate = date_ranges['test']['start']
-
-            dates = []
-        def add_months(sourcedate, months):
-            month = sourcedate.month - 1 + months
-            year = sourcedate.year + month // 12
-            month = month % 12 + 1
-            day = calendar.monthrange(year, month)[1]
-            return (datetime(year, month, day))
-        for i in range(n):
-            currentDate = add_months(currentDate, 3)
-            dates.append(currentDate.strftime('%Y-%m-%d'))
-
-
-            "Selecting actual close prices corresponding to forecasted dates"
-            for v in range(1,7):
-                query = """
-                SELECT date, close, instrumentid FROM dbo_instrumentstatistics
-                WHERE instrumentid = {}
-                AND
-                date = '{}'
-                """.format(
-                v,
-                currentDate.strftime('%Y-%m-%d'))
-                actual_df = pd.read_sql_query(query, self.engine)
-
-
-                "Converting dates to lists for smooth comparison"
-                actual_list = actual_df['date'].tolist()
-                forecast_date_list = df['date'].tolist()
-                "Converting time series to string"
-                actual_date = actual_df['date']
-                forecast_date = df['date']
-                string_actual = actual_date.to_string()
-
-                string_forecast = forecast_date.to_string()
-
-
-
-                "Converting close prices to list"
-                forecast_close = df['close'].tolist()
-                actual_close = actual_df['close'].tolist()
-
-                #storing percent error in array
-                percent_error = []
-                "Comparing forecasted and actual dates and calculating absolute percent error"
-                if string_actual != string_forecast:
-                    percent_error = [(actual_close - forecast_close)  / (actual_close) for actual_close, forecast_close in zip(actual_close, forecast_close)]
-                    absolute_percent_error = [abs(ele) for ele in percent_error]
-                    "Print percent error for each instrument"
-                    #Label with instruments
-                    #print("Date: " + string_actual)
-                    #print(absolute_percent_error)
-                    #print(len(absolute_percent_error))
-
-                #print(actual_list)
-                #print(type(actual_list))
-                #collections.Counter(actual_list) == collections.Counter(forecast_date_list)
-                #set(actual_list) == set(forecast_date_list)
-                #sorted(actual_list) == sorted(forecast_date_list)
-
-
-            #for ele in actual_list, forecast_date_list:
-
-
-
-
 
     def calc(self, df1, df2, n):
         G = 0
@@ -1349,7 +975,8 @@ class DataForecast:
         S = S / n                                                                                                       #Divide percent change by 2
         G = G / 100                                                                                                     #Then convert from percent to number
         return (G*2),S                                                                                                  #And return both values
-#
-# # END CODE MODULE
+
+
+
 
 # END CODE MODULE
