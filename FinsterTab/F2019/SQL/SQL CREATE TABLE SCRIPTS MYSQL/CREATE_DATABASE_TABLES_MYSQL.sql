@@ -159,7 +159,10 @@ values ('GDP' , 'GDP'   , 'FRED/NGDPPOT', 'Quandl', 0, 'A'),
 	   ('UR' , 'Unemployment Rate'  , 'USMISERY/INDEX', 'Quandl', 0, 'A'),
 	   ('IR' , 'Inflation Rate'  , 'USMISERY/INDEX', 'Quandl', 0, 'A'),
 	   ('MI' , 'Misery Index'  , 'USMISERY/INDEX', 'Quandl', 0, 'A'),
-       ('TYX', '30 Year Bond Yield', '^TYX', 'Yahoo', 0, 'I')
+       ('TYX', '30 Year Bond Yield', '^TYX', 'Yahoo', 0, 'I'),
+       ('COVI', 'Crude Oil ETF Volatility Index', 'OVXCLS', 'FRED', 0, 'A'),
+       ('CPIUC', 'Consumer Price Index Urban Consumers', 'CPIAUCSL', 'FRED', 0, 'A'),
+       ('FSI', 'Financial Stress Index', 'STLFSI', 'FRED', 0, 'A')
 ;
 
 DROP TABLE IF EXISTS dbo_macroeconstatistics;
