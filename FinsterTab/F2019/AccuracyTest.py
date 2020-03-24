@@ -410,7 +410,7 @@ def MSF2_accuracy(self):
         #Prints the trend accuracy
         #print('The accuracy for instrument %d: %.2f%%\n' % (i, b))
 
-def create_weightings(self):
+def create_weightings_MSF2(self):
     keys = {}
     query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
     data = pd.read_sql_query(query, self.engine)
@@ -487,8 +487,91 @@ def create_weightings(self):
                     elif (best_avg_error > weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n)):
                         best_avg_error = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n)
                         best_weightings = [weight, uweight, iweight]
-        #print("The lowest avg percent error is %.7f%% for instrumentID %d" % (best_avg_error, ikeys[x]))
-        #print("The weightings are: ", best_weightings)
+        print("The lowest avg percent error is %.7f%% for instrumentID %d" % (best_avg_error, ikeys[x]), ' for function: MSF2')
+        print("The weightings are: ", best_weightings, ' for function: MSF2')
+        weightings[ikeys[x]] = best_weightings
+
+    return weightings
+
+def create_weightings_MSF3(self):
+    keys = {}
+    query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
+    data = pd.read_sql_query(query, self.engine)
+    vars = {}
+    weightings = {}
+    for i in data['macroeconcode']:
+        if (i == 'GDP' or i == 'COVI' or i == 'CPIUC' or i == 'FSI'):
+            d = {i: []}
+            vars.update(d)
+            weightings.update(d)
+    query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
+    data1 = pd.read_sql_query(query, self.engine)
+    ikeys = {}
+    result = {}
+    for i in data1['instrumentid']:
+        d = {i: []}
+        result.update(d)
+
+    currentDate = str(datetime.today())  # Initiailizes a variable to represent today's date, used to fetch forecast dates
+    currentDate = ("'" + currentDate + "'")
+
+    n = 8
+    for i in range(len(data)):
+        keys.update({data['macroeconname'].iloc[i]: data['macroeconcode'].iloc[i]})
+
+    for x in range(len(data1)):
+        ikeys.update({data1['instrumentname'].iloc[x]: data1['instrumentid'].iloc[x]})
+
+    for x in ikeys:
+        for i in keys:
+            if keys[i] in vars:
+                query = 'SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format(
+                    '"' + keys[i] + '"')
+                data = pd.read_sql_query(query, self.engine)
+
+                # For loop to retrieve macro statistics and calculate percent change
+                for j in range(n):
+                    temp = data.tail(n + 1)
+                    data = data.tail(n)
+                    if j == 0:
+                        macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
+                        vars[keys[i]].append(macrov)
+                    else:
+                        macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j - 1]) / \
+                                 data['statistics'].iloc[j - 1]
+                        vars[keys[i]].append(macrov)
+
+        query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
+                "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
+                "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2016-01-01' AND '2018-01-01' ) z " \
+                "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
+                "MONTH(z.date) = 12)".format(ikeys[x])
+
+        instrumentStats = pd.read_sql_query(query, self.engine)
+
+        instrumentStats = instrumentStats.tail(n)
+
+        avg_percent_errors = []
+        best_weightings = [0, 0, 0]
+        best_avg_error = -1
+        for weight in numpy.arange(1, 2.25, .1):
+            for uweight in numpy.arange(0, 2.5, .25):
+                for iweight in numpy.arange(0, 2.5, .25):
+                    stat_check = []
+                    for i in range(n):
+                        stat = vars['GDP'][i] * weight - (vars['COVI'][i] * uweight + vars['FSI'][i] * iweight) - (
+                                    vars['CPIUC'][i] * vars['CPIUC'][i])
+                        stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
+                        stat_check.append(stat)
+                    if (best_avg_error < 0):
+                        best_avg_error = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n)
+                        best_weightings = [weight, uweight, iweight]
+                    elif (best_avg_error > weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n)):
+                        best_avg_error = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n)
+                        best_weightings = [weight, uweight, iweight]
+        print("The lowest avg percent error is %.7f%% for instrumentID %d" % (best_avg_error, ikeys[x]), ' for function: MSF3')
+        print("The weightings are: ", best_weightings, ' for function: MSF3')
+        print()
         weightings[ikeys[x]] = best_weightings
 
     return weightings

@@ -5,6 +5,9 @@ from datetime import datetime, timedelta, date    # library for date and time ca
 import sqlalchemy as sal                          # SQL toolkit, Object-Relational Mapper for Python
 from pandas.tseries.holiday import get_calendar, HolidayCalendarFactory, GoodFriday  # calendar module to use a pre-configured calendar
 import quandl
+from fredapi import Fred
+
+fred = Fred(api_key='26a5ada544f2b9589d92bac5f792dc5d')
 
 
 # Declaration and Definition of DataFetch class
@@ -124,7 +127,6 @@ class DataFetch:
         curDate = "'" + str(now) + "'"
         end = now.strftime("%Y-%m-%d")
         for n in keys:
-
             if (keys[n] == 'Quandl'):
                 data = quandl.get(n, authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31",                         #Retrieves data source corresponding to var[n]
                                   end_date="2020-03-05")
@@ -191,5 +193,23 @@ class DataFetch:
                     query = 'UPDATE dbo_macroeconmaster SET datecreated={}  WHERE macroeconcode = {}'.format(curDate, '"' + mec['macroeconcode'][cnt] + '"')
                     self.engine.execute(query)
                     cnt += 1
+
+            elif (keys[n] == 'FRED'):
+                data = fred.get_series(n, frequency='q')
+                data = data.to_frame(name='statistics')
+                data = data.reset_index(drop=False)
+
+                data.rename(columns={'index': 'date'},inplace=True)
+                data['macroeconcode'] = mec['macroeconcode'][cnt]
+
+                data.to_sql('dbo_macroeconstatistics', self.engine, if_exists=('replace' if cnt == 0 else 'append'),
+                            index=False, dtype={'date': sal.Date, 'statistics': sal.FLOAT})
+
+                query = 'UPDATE dbo_macroeconmaster SET datecreated={}  WHERE macroeconcode = {}'.format(curDate, '"' + mec['macroeconcode'][cnt] + '"')  # Sets the access date column for the macro master table
+                self.engine.execute(query)
+                cnt += 1
+
+        query = 'DELETE FROM dbo_macroeconstatistics WHERE statistics IS NULL'
+        self.engine.execute(query)
 
 # END CODE MODULE

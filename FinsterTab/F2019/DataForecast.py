@@ -851,7 +851,7 @@ class DataForecast:
 
 
         table = pd.DataFrame(data, columns=['forecastdate','instrumentid' , 'macroeconcode',
-                                            'forecastprice', 'algorithmcode', 'prederror'])  # Convert data list to dataframe variable
+                                            'forecastprice', 'algorithmcode', 'prederror'])                             # Convert data list to dataframe variable
 
         table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('replace'),
                      index=False)
@@ -866,8 +866,9 @@ class DataForecast:
         data = pd.read_sql_query(query, self.engine)
         vars = {}
         for i in data['macroeconname']:
-            d = {i: []}
-            vars.update(d)
+            if(i == 'GDP' or i == 'Unemployment Rate' or i == 'Inflation Rate' or i == 'Misery Index'):
+                d = {i: []}
+                vars.update(d)
         query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
         data1 = pd.read_sql_query(query, self.engine)
         ikeys = {}
@@ -875,7 +876,7 @@ class DataForecast:
         for i in data1['instrumentid']:
             d = {i: []}
             result.update(d)
-        weightings = FinsterTab.F2019.AccuracyTest.create_weightings(self.engine)
+        weightings = FinsterTab.F2019.AccuracyTest.create_weightings_MSF2(self.engine)
         currentDate = str(datetime.today())                                                                        # Initiailizes a variable to represent today's date, used to fetch forecast dates
         currentDate = ("'" + currentDate + "'")
 
@@ -964,6 +965,114 @@ class DataForecast:
 
         table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('append'), index=False)
 
+
+    def MSF3(self):
+        keys = {}
+        query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
+        data = pd.read_sql_query(query, self.engine)
+        vars = {}
+        for i in data['macroeconcode']:
+            if(i == 'GDP' or i == 'COVI' or i == 'CPIUC' or i == 'FSI'):
+                d = {i: []}
+                vars.update(d)
+        query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
+        data1 = pd.read_sql_query(query, self.engine)
+        ikeys = {}
+        result = {}
+        for i in data1['instrumentid']:
+            d = {i: []}
+            result.update(d)
+        weightings = FinsterTab.F2019.AccuracyTest.create_weightings_MSF3(self.engine)
+        currentDate = str(datetime.today())                                                                        # Initiailizes a variable to represent today's date, used to fetch forecast dates
+        currentDate = ("'" + currentDate + "'")
+
+        n = 8
+        for i in range(len(data)):
+            keys.update({data['macroeconname'].iloc[i]: data['macroeconcode'].iloc[i]})
+
+        for x in range(len(data1)):
+            ikeys.update({data1['instrumentname'].iloc[x]: data1['instrumentid'].iloc[x]})
+
+        for x in ikeys:
+            for i in keys:
+                if keys[i] in vars:
+                    query = 'SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format('"' + keys[i] + '"')
+                    data = pd.read_sql_query(query, self.engine)
+
+                    #For loop to retrieve macro statistics and calculate percent change
+                    for j in range(n):
+                        temp = data.tail(n + 1)
+                        data = data.tail(n)
+                        if j == 0:
+                            macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
+                            vars[keys[i]].append(macrov)
+                        else:
+                            macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j-1]) / data['statistics'].iloc[j-1]
+                            vars[keys[i]].append(macrov)
+
+            query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
+                    "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
+                    "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2014-03-21' AND {} ) z " \
+                    "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
+                    "MONTH(z.date) = 12)".format(ikeys[x], currentDate)
+
+            instrumentStats = pd.read_sql_query(query, self.engine)
+
+            instrumentStats = instrumentStats.tail(n)
+
+            Y = []
+            #OLD FUNCTION
+            #stat = vars['GDP'][i] * weight - (vars['COVI'][i] * uweight + vars['FSI'][i] * iweight) - (
+            #                        vars['CPIUC'][i] * vars['CPIUC'][i])
+            for i in range(n):
+                stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['COVI'][i] * weightings[ikeys[x]][1] + vars['FSI'][i] * weightings[ikeys[x]][2]) - \
+                       (vars['CPIUC'][i] * vars['CPIUC'][i])
+                stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
+                Y.append(stat)
+            result[ikeys[x]].append(Y)
+
+
+        # Getting Dates for Future Forecast
+        currentDate = datetime.today()
+        date = []  # Creates a list to store future forecast dates
+        count = 0
+        if (currentDate.month < 4):  # This will set the value of count according to which month we are in, this is to avoid having past forecast dates in the list
+            count = 0
+        elif (currentDate.month < 7 and currentDate.month >= 4):
+            count = 1
+        elif (currentDate.month < 10 and currentDate.month >= 7):
+            count = 2
+        else:
+            count = 3
+        year = currentDate.year                                                                                         # Initialize a variable to the current year
+        for i in range(n):                                                                                              # Setup a for loop to loop through and append the date list with the date of the start of the next quarter
+                                                                                                                        # For loop will run n times, corresponding to amount of data points we are working with
+            if (count == 0):                                                                                            # If the count is 0 then we are still in the first quarter
+                date.append(str(year) + "-03-" + "31")                                                                  # Append the date list with corresponding quarter and year
+                count += 1                                                                                              # Increase count so this date is not repeated for this year
+            elif (count == 1):                                                                                          # Do the same for the next quarter
+                date.append(str(year) + "-06-" + "30")
+                count += 1
+            elif (count == 2):                                                                                          # And for the next quarter
+                date.append(str(year) + "-09-" + "30")
+                count += 1
+            else:                                                                                                       # Until we account for the last quarter of the year
+                date.append(str(year) + "-12-" + "31")
+                count = 0
+                year = year + 1                                                                                         # Where we then incrament the year for the next iterations
+
+        table = []
+        for i, k in result.items():
+            cnt = 0
+            for j in k:
+                for l in range(n):
+                    table.append([date[cnt], i, 'ALL', j[cnt], 'MSF3', 0])
+                    cnt += 1
+
+        table = pd.DataFrame(table, columns=['forecastdate','instrumentid' , 'macroeconcode',
+                                            'forecastprice', 'algorithmcode', 'prederror'])
+
+        table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('append'), index=False)
 
     def calc(self, df1, df2, n):
         G = 0
