@@ -31,6 +31,22 @@ def accuracy(self):
                          df['forecastcloseprice'][
                              x]):
                     count += 1
+
+
+            # Populates absolute_percent_error with the calculated percent error for a specific data point
+            absolute_percent_error = []
+            for i in range(len(df)):
+                absolute_percent_error.append(
+                    abs((df['close'].loc[i] - df['forecastcloseprice'].loc[i]) / df['close'].loc[i]))
+
+            # Calculate sum of percent error and find average
+            average_percent_error = 0
+            for i in absolute_percent_error:
+                average_percent_error = average_percent_error + i
+            average_percent_error = average_percent_error / len(df)
+
+            # return the average percent error calculated above
+            print("Average percent error for instrument: %d and algorithm: %s " % (ID, algorithm_df['algorithmcode'][code]), average_percent_error)
             #print('Algorithm:', algorithm_df['algorithmcode'][code])
             #print('instrumentid: %d' % ID, instrument_master_df['instrumentname'][ID - 1])
             #print('length of data is:', len(df))
@@ -440,25 +456,25 @@ def create_weightings_MSF2(self):
     for x in range(len(data1)):
         ikeys.update({data1['instrumentname'].iloc[x]: data1['instrumentid'].iloc[x]})
 
+    for i in keys:
+        if i in vars:
+            query = 'SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format(
+                '"' + keys[i] + '"')
+            data = pd.read_sql_query(query, self.engine)
+
+            # For loop to retrieve macro statistics and calculate percent change
+            for j in range(n):
+                temp = data.tail(n + 1)
+                data = data.tail(n)
+                if j == 0:
+                    macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
+                    vars[i].append(macrov)
+                else:
+                    macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j - 1]) / \
+                             data['statistics'].iloc[j - 1]
+                    vars[i].append(macrov)
+
     for x in ikeys:
-        for i in keys:
-            if i in vars:
-                query = 'SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format(
-                    '"' + keys[i] + '"')
-                data = pd.read_sql_query(query, self.engine)
-
-                # For loop to retrieve macro statistics and calculate percent change
-                for j in range(n):
-                    temp = data.tail(n + 1)
-                    data = data.tail(n)
-                    if j == 0:
-                        macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
-                        vars[i].append(macrov)
-                    else:
-                        macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j - 1]) / \
-                                 data['statistics'].iloc[j - 1]
-                        vars[i].append(macrov)
-
         query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
                 "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
                 "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2016-01-01' AND '2018-01-01' ) z " \
@@ -472,23 +488,29 @@ def create_weightings_MSF2(self):
         avg_percent_errors = []
         best_weightings = [0, 0, 0]
         best_avg_error = -1
-        for weight in numpy.arange(1, 2.25, .25):
-            for uweight in numpy.arange(0, 2.5, .5):
-                for iweight in numpy.arange(0, 2.5, .5):
+        best_trend_error = -1
+        for weight in numpy.arange(0, 2, .1):
+            for uweight in numpy.arange(0, 1, .1):
+                for iweight in numpy.arange(0, 1, .1):
                     stat_check = []
                     for i in range(n):
                         stat = vars['GDP'][i] * weight - (vars['Unemployment Rate'][i] * uweight + vars['Inflation Rate'][i] * iweight) - (
                                     vars['Misery Index'][i] * vars['Misery Index'][i])
                         stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
                         stat_check.append(stat)
+
+                    temp_avg_error, temp_trend_error = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n, 'MSF2')
                     if (best_avg_error < 0):
-                        best_avg_error = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n)
+                        best_avg_error = temp_avg_error
                         best_weightings = [weight, uweight, iweight]
-                    elif (best_avg_error > weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n)):
-                        best_avg_error = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n)
+                        best_trend_error = temp_trend_error
+                    elif (best_avg_error > temp_avg_error):
+                        best_avg_error = temp_avg_error
                         best_weightings = [weight, uweight, iweight]
+                        best_trend_error = temp_trend_error
         print("The lowest avg percent error is %.7f%% for instrumentID %d" % (best_avg_error, ikeys[x]), ' for function: MSF2')
         print("The weightings are: ", best_weightings, ' for function: MSF2')
+        print('The trend error is: ', best_trend_error)
         weightings[ikeys[x]] = best_weightings
 
     return weightings
@@ -522,25 +544,25 @@ def create_weightings_MSF3(self):
     for x in range(len(data1)):
         ikeys.update({data1['instrumentname'].iloc[x]: data1['instrumentid'].iloc[x]})
 
+    for i in keys:
+        if keys[i] in vars:
+            query = 'SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format(
+                '"' + keys[i] + '"')
+            data = pd.read_sql_query(query, self.engine)
+
+            # For loop to retrieve macro statistics and calculate percent change
+            for j in range(n):
+                temp = data.tail(n + 1)
+                data = data.tail(n)
+                if j == 0:
+                    macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
+                    vars[keys[i]].append(macrov)
+                else:
+                    macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j - 1]) / \
+                             data['statistics'].iloc[j - 1]
+                    vars[keys[i]].append(macrov)
+
     for x in ikeys:
-        for i in keys:
-            if keys[i] in vars:
-                query = 'SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format(
-                    '"' + keys[i] + '"')
-                data = pd.read_sql_query(query, self.engine)
-
-                # For loop to retrieve macro statistics and calculate percent change
-                for j in range(n):
-                    temp = data.tail(n + 1)
-                    data = data.tail(n)
-                    if j == 0:
-                        macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
-                        vars[keys[i]].append(macrov)
-                    else:
-                        macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j - 1]) / \
-                                 data['statistics'].iloc[j - 1]
-                        vars[keys[i]].append(macrov)
-
         query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
                 "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
                 "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2016-01-01' AND '2018-01-01' ) z " \
@@ -554,29 +576,38 @@ def create_weightings_MSF3(self):
         avg_percent_errors = []
         best_weightings = [0, 0, 0]
         best_avg_error = -1
-        for weight in numpy.arange(1, 2.25, .1):
-            for uweight in numpy.arange(0, 2.5, .25):
-                for iweight in numpy.arange(0, 2.5, .25):
+        best_trend_error = -1
+        for weight in numpy.arange(0, 2, .1):
+            for uweight in numpy.arange(0, 1, .1):
+                for iweight in numpy.arange(0, 1, .1):
                     stat_check = []
                     for i in range(n):
                         stat = vars['GDP'][i] * weight - (vars['COVI'][i] * uweight + vars['FSI'][i] * iweight) - (
                                     vars['CPIUC'][i] * vars['CPIUC'][i])
                         stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
                         stat_check.append(stat)
+                        #MAKE SURE STAT IS BETWEEN 0 and 1
+
+                    temp_avg_error, temp_trend_error = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n, 'MSF3')
                     if (best_avg_error < 0):
-                        best_avg_error = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n)
+                        best_avg_error = temp_avg_error
                         best_weightings = [weight, uweight, iweight]
-                    elif (best_avg_error > weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n)):
-                        best_avg_error = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n)
+                        best_trend_error = temp_trend_error
+                    elif (best_avg_error > temp_avg_error):
+                        best_avg_error = temp_avg_error
                         best_weightings = [weight, uweight, iweight]
+                        best_trend_error = temp_trend_error
+
         print("The lowest avg percent error is %.7f%% for instrumentID %d" % (best_avg_error, ikeys[x]), ' for function: MSF3')
         print("The weightings are: ", best_weightings, ' for function: MSF3')
-        print()
-        weightings[ikeys[x]] = best_weightings
+        print('The trend error is: ',  best_trend_error)
 
+        weightings[ikeys[x]] = best_weightings
+    print(vars)
     return weightings
 
-def weight_check(self, calculated_forecast, instrumentid, n):
+def weight_check(self, calculated_forecast, instrumentid, n, function_name):
+    #Retrieves the actual stock closing prices quarterly from 2018 to 2020 to compare with our calculated forecast prices
     query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentID, ROW_NUMBER() OVER " \
             "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
             "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2018-01-01' AND '2020-01-01' ) z " \
@@ -597,21 +628,38 @@ def weight_check(self, calculated_forecast, instrumentid, n):
     # Creates a dataframe out of the array created above
     df = pd.DataFrame(results, columns=['forecastdate', 'instrumentid', 'forecastcloseprice', 'close'])
 
-    for i in range(len(df)):
-        temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
-        absolute_percent_error = [abs(ele) for ele in temp_error]
+    #Populates absolute_percent_error with the calculated percent error for a specific data point
+    absolute_percent_error = []
+    for i in range(n):
+        absolute_percent_error.append(abs((df['close'].loc[i] - df['forecastcloseprice'].loc[i]) / df['close'].loc[i]))
 
-        # Calculate sum of percent error and find average
+    # Calculate sum of percent error and find average
+    average_percent_error = 0
+    for i in absolute_percent_error:
+        average_percent_error = average_percent_error + i
+    average_percent_error = average_percent_error/n
 
-        average_percent_error = sum(absolute_percent_error) / 8
+    count = 0
+    # Calculates accuracy
+    for x in range((len(df) - 1)):
+        # Check if upward or downward trend
+        if (df['close'][x + 1] > df['close'][x] and df['forecastcloseprice'][x + 1] > df['forecastcloseprice'][
+            x]) or \
+                (df['close'][x + 1] < df['close'][x] and df['forecastcloseprice'][x + 1] <
+                 df['forecastcloseprice'][
+                     x]):
+            count += 1
 
-        return average_percent_error
-        #print("Average percent error of MSF2 on instrument %d: " % instrumentid, average_percent_error * 100, "%")
+    d = len(df)
+    b = (count / d) * 100
+    #print("Trend accuracy for %s is %.2f%%" % (function_name, b))
+    #return the average percent error calculated above
+    return average_percent_error, b
 
 
 db_engine = DBEngine().mysql_engine()
 #arima_accuracy(db_engine)
-#accuracy(db_engine)
+accuracy(db_engine)
 #MSF1_accuracy(db_engine)
 #MSF2_accuracy(db_engine)
 #create_weightings(db_engine)
