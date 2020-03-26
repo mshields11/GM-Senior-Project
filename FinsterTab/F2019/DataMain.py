@@ -9,13 +9,6 @@ from TradingSimulator import TradingSimulator
 # create database connection
 db_engine = DBEngine().mysql_engine()
 
-DataFetch.macroFetch(db_engine)
-<<<<<<< HEAD
-DataForecast.MacroForecast(db_engine)
-=======
-# DataFetch.GDPForecast(db_engine)
->>>>>>> master
-
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'
 
@@ -31,6 +24,13 @@ master_data.get_data(ticker_symbols)
 # get date data and store in DateDim, replaced the SQL calendar code
 master_data.get_calendar()
 
+#Macro Economic Variable Functions
+# DataFetch.macroFetch(db_engine)
+# DataForecast.MacroEconIndForecast(db_engine)
+# DataForecast.MacroEconCombForecast(db_engine)
+# DataForecast.MSF3(db_engine)
+# exit(1)
+
 # calculate technical indicators and store in EngineeredFeatures
 indicators = EngineeredFeatures(db_engine, instrument_master)
 
@@ -39,7 +39,8 @@ indicators.calculate()
 
 # Get Raw Data from database to calculate forecasts
 forecast = DataForecast(db_engine, instrument_master)
-
+forecast.calculate_regression()
+exit(1  )
 # calculate and store price predictions
 forecast.calculate_forecast()
 
