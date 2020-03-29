@@ -7,7 +7,7 @@ from math import sqrt
 from statistics import stdev
 import numpy as np
 import xgboost as xgb
-import datetime
+from datetime import *
 import sqlalchemy as sal
 from sklearn.model_selection import train_test_split    # not used at this time
 from sklearn.linear_model import LinearRegression
@@ -944,7 +944,6 @@ class DataForecast:
                         date.append(str(year) + "-12-" + "31")
                         count = 0
                         year = year + 1  # Where we then incrament the year for the next iterations
-
                 # Algorithm for forecast price
                 G, S = DataForecast.calc(self, macroPercentChange, SP,
                                          n)  # Calculates the average GDP and S&P values for the given data points over n days and performs operations on GDP average

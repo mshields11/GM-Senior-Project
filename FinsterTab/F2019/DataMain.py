@@ -26,7 +26,7 @@ master_data.get_calendar()
 
 #Macro Economic Variable Functions
 # DataFetch.macroFetch(db_engine)
-# DataForecast.MacroEconIndForecast(db_engine)
+DataForecast.MacroEconIndForecast(db_engine)
 # DataForecast.MacroEconCombForecast(db_engine)
 # DataForecast.MSF3(db_engine)
 # exit(1)
