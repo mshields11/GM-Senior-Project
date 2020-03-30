@@ -30,8 +30,8 @@ master_data.get_calendar()
 
 #Macro Economic Variable Functions
 DataFetch.macroFetch(db_engine)
-DataForecast.MacroEconIndForecast(db_engine)
-DataForecast.MacroEconCombForecast(db_engine)
+DataForecast.MSF1(db_engine)
+DataForecast.MSF2(db_engine)
 DataForecast.MSF3(db_engine)
 
 # calculate technical indicators and store in EngineeredFeatures

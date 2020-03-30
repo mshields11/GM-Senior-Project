@@ -426,134 +426,205 @@ def MSF2_accuracy(self):
         #Prints the trend accuracy
         #print('The accuracy for instrument %d: %.2f%%\n' % (i, b))
 
+
+#Create weightings MSF2 runs the MSF2 algorithm for past dates and compares them to actual instrument prices, generating a percent error calculation
+#We then iterate through several different weightings and we compare each percent error for each instrument and determine the weightings with the lowest percent error
 def create_weightings_MSF2(self):
-    keys = {}
+    # Count variable to determine whether to replace or append the visualize and compare database
+    cnt = 0
+
+    # Query to grab the macroeconcodes and macroeconnames from the macroeconmaster database table
     query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
     data = pd.read_sql_query(query, self.engine)
-    vars = {}
-    for i in data['macroeconname']:
-        d = {i: []}
-        vars.update(d)
-    # (vars)
+
+    # Query to grab the instrumentid and instrument name from the instrumentmaster database table
     query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
     data1 = pd.read_sql_query(query, self.engine)
-    ikeys = {}
-    result = {}
-    weightings = {}
-    for i in data1['instrumentid']:
-        d = {i: []}
-        result.update(d)
-        weightings.update(d)
 
-    currentDate = str(
-        datetime.today())  # Initiailizes a variable to represent today's date, used to fetch forecast dates
-    currentDate = ("'" + currentDate + "'")
-
-    n = 8
+    # Keys is a dictionary that will be used to store the macro econ code for each macro econ name
+    keys = {}
     for i in range(len(data)):
         keys.update({data['macroeconname'].iloc[i]: data['macroeconcode'].iloc[i]})
 
+    # ikeys is a dictionary that will be used to store instrument ids for each instrument name
+    ikeys = {}
     for x in range(len(data1)):
         ikeys.update({data1['instrumentname'].iloc[x]: data1['instrumentid'].iloc[x]})
 
+    #Vars is a dictionary used to store the macro economic variable percent change for each macro economic code
+    vars = {}
+    #Vars is only populated with the relevant macro economic variables (GDP, COVI, CPIUC, and FSI)
+    for i in data['macroeconcode']:
+        if (i == 'GDP' or i == 'UR' or i == 'IR' or i == 'MI'):
+            d = {i: []}
+            vars.update(d)
+
+    #Weightings is used to store the best weightings for each instrument id which is returned to dataforecast and used for actual prediction
+    weightings = {}
+
+    #n represents the number of datapoints we are working with (represented in quarters)
+    n = 8
+
+    #For loop to loop through the macroeconomic codes to calculate the macro economic variable percent change
     for i in keys:
-        if i in vars:
+        #Check to make sure the macroeconcode we are working with is one of the relevant ones
+        if keys[i] in vars:
+            #Query to grab the macroeconomic statistics from the database using the relevant macro economic codes
             query = 'SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format(
                 '"' + keys[i] + '"')
             data = pd.read_sql_query(query, self.engine)
 
             # For loop to retrieve macro statistics and calculate percent change
             for j in range(n):
+                #This will grab the n+1 statistic to use to calculate the percent change to the n statistic
                 temp = data.tail(n + 1)
+                #This will grab the most recent n statistics from the query, as we are working only with n points
                 data = data.tail(n)
+
+                #For the first iteration we need to use the n+1th statistic to calculate percent change on the oldest point
                 if j == 0:
                     macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
-                    vars[i].append(macrov)
+                    vars[keys[i]].append(macrov)
                 else:
                     macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j - 1]) / \
                              data['statistics'].iloc[j - 1]
-                    vars[i].append(macrov)
-
+                    vars[keys[i]].append(macrov)
+    # We now iterate through the instrument ids
     for x in ikeys:
+
+        # This query will grab the quarterly instrument statistics from 2016 to 2018
         query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
                 "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
                 "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2016-01-01' AND '2018-01-01' ) z " \
                 "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
                 "MONTH(z.date) = 12)".format(ikeys[x])
 
+        # Then we execute the query and store the returned values in instrumentStats, and grab the last n stats from the dataframe as we are only using n datapoints
         instrumentStats = pd.read_sql_query(query, self.engine)
-
         instrumentStats = instrumentStats.tail(n)
 
-        avg_percent_errors = []
+        #Best weightings will be used to store the best weightings for each instrument
         best_weightings = [0, 0, 0]
+
+        #Best avg error will be used to store the best average percent error for each isntrument
         best_avg_error = -1
+
+        #Best trend error will be used to store the best trend error for each instrument
         best_trend_error = -1
-        for weight in numpy.arange(0, 2, .1):
+
+        #Best forecast prices will be used to store the forecast prices for the best weightings to store them in a database for visual comparison later
+        best_forecast_prices = []
+
+        # We now iterate through all 3 different possible weightings
+        for weight in numpy.arange(0, 1, .1):
             for uweight in numpy.arange(0, 1, .1):
                 for iweight in numpy.arange(0, 1, .1):
+
+                    # We intialize a list to store the resulting forecasted prices to compare in another function
                     stat_check = []
+
+                    # This is the actual calculation of MSF3 where we store the result in stat_check to compare to actual instrument prices
                     for i in range(n):
-                        stat = vars['GDP'][i] * weight - (vars['Unemployment Rate'][i] * uweight + vars['Inflation Rate'][i] * iweight) - (
-                                    vars['Misery Index'][i] * vars['Misery Index'][i])
+                        stat = vars['GDP'][i] * weight - (vars['UR'][i] * uweight + vars['IR'][i] * iweight) - (
+                                    vars['MI'][i] * vars['MI'][i])
                         stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
                         stat_check.append(stat)
 
-                    temp_avg_error, temp_trend_error = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n, 'MSF2')
+                    # We call to the weight check function using the list of forecasted prices, the current instrument id, the amount of datapoints we are working with, and the name of the function we are testing
+                    # It then returns the average percent error and trend error for the forecasted prices, as well as the dates we are forecasting for so we can insert them into the visualize table
+                    temp_avg_error, temp_trend_error, dates = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n, 'MSF2')
+
+                    # Check to see if the best_avg_error has been initialized to a valid average percent error, if not then no average error or trend error has been calculated yet
                     if (best_avg_error < 0):
+                        # If so store the average percent error, the best weightings, best trend error, and the resulting forecasted prices for comparison with other weightings
                         best_avg_error = temp_avg_error
                         best_weightings = [weight, uweight, iweight]
                         best_trend_error = temp_trend_error
+                        best_forecast_prices = stat_check
+
+                    # Otherwise check if the newly calculated average percent error is worse than the newly calculated one
                     elif (best_avg_error > temp_avg_error):
+                        # And if so set the values for all the relevant variables
                         best_avg_error = temp_avg_error
                         best_weightings = [weight, uweight, iweight]
                         best_trend_error = temp_trend_error
+                        best_forecast_prices = stat_check
+
+        # Print statements to view the average percent error, trend error, and best weightings
         print("The lowest avg percent error is %.7f%% for instrumentID %d" % (best_avg_error, ikeys[x]), ' for function: MSF2')
         print("The weightings are: ", best_weightings, ' for function: MSF2')
         print('The trend error is: ', best_trend_error)
+
+        # initializes weightings dictionary as the best weightings found for each instrument id
         weightings[ikeys[x]] = best_weightings
 
+        # visual_comparisons will be used to store the past forecasted prices so we can visualize them compared to actual instrument prices on a graph
+        visual_comparisons = []
+        for k in range(n):
+            visual_comparisons.append([dates[k], ikeys[x], best_forecast_prices[k], 'MSF2'])
+        df1 = pd.DataFrame(visual_comparisons, columns=['forecastdate', 'instrumentid', 'forecastcloseprice', 'algorithmcode'])
+        df1.to_sql('dbo_tempvisualize', self.engine,
+                    if_exists=('replace' if cnt == 0 else 'append'), index=False)
+
+        #Incrament count so that the next iterations do not replace the database
+        cnt += 1
+    # The weightings for each instrument ID are returned to dataforecast and used for prediction
     return weightings
 
+#Create weightings MSF3 runs the MSF3 algorithm for past dates and compares them to actual instrument prices, generating a percent error calculation
+#We then iterate through several different weightings and we compare each percent error for each instrument and determine the weightings with the lowest percent error
 def create_weightings_MSF3(self):
-    keys = {}
+
+    #Query to grab the macroeconcodes and macroeconnames from the macroeconmaster database table
     query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
     data = pd.read_sql_query(query, self.engine)
+
+    #Query to grab the instrumentid and instrument name from the instrumentmaster database table
+    query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
+    data1 = pd.read_sql_query(query, self.engine)
+
+
+    #Keys is a dictionary that will be used to store the macro econ code for each macro econ name
+    keys = {}
+    for i in range(len(data)):
+        keys.update({data['macroeconname'].iloc[i]: data['macroeconcode'].iloc[i]})
+
+    #ikeys is a dictionary that will be used to store instrument ids for each instrument name
+    ikeys = {}
+    for x in range(len(data1)):
+        ikeys.update({data1['instrumentname'].iloc[x]: data1['instrumentid'].iloc[x]})
+
+    #Vars is a dictionary used to store the macro economic variable percent change for each macro economic code
     vars = {}
-    weightings = {}
+    #Vars is only populated with the relevant macro economic variables (GDP, COVI, CPIUC, and FSI)
     for i in data['macroeconcode']:
         if (i == 'GDP' or i == 'COVI' or i == 'CPIUC' or i == 'FSI'):
             d = {i: []}
             vars.update(d)
-            weightings.update(d)
-    query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
-    data1 = pd.read_sql_query(query, self.engine)
-    ikeys = {}
-    result = {}
-    for i in data1['instrumentid']:
-        d = {i: []}
-        result.update(d)
 
-    currentDate = str(datetime.today())  # Initiailizes a variable to represent today's date, used to fetch forecast dates
-    currentDate = ("'" + currentDate + "'")
+    #Weightings is used to store the best weightings for each instrument id which is returned to dataforecast and used for actual prediction
+    weightings = {}
 
+    #n represents the number of datapoints we are working with (represented in quarters)
     n = 8
-    for i in range(len(data)):
-        keys.update({data['macroeconname'].iloc[i]: data['macroeconcode'].iloc[i]})
 
-    for x in range(len(data1)):
-        ikeys.update({data1['instrumentname'].iloc[x]: data1['instrumentid'].iloc[x]})
-
+    #For loop to loop through the macroeconomic codes to calculate the macro economic variable percent change
     for i in keys:
+        #Check to make sure the macroeconcode we are working with is one of the relevant ones
         if keys[i] in vars:
+            #Query to grab the macroeconomic statistics from the database using the relevant macro economic codes
             query = 'SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format(
                 '"' + keys[i] + '"')
             data = pd.read_sql_query(query, self.engine)
 
             # For loop to retrieve macro statistics and calculate percent change
             for j in range(n):
+                #This will grab the n+1 statistic to use to calculate the percent change to the n statistic
                 temp = data.tail(n + 1)
+                #This will grab the most recent n statistics from the query, as we are working only with n points
                 data = data.tail(n)
+
+                #For the first iteration we need to use the n+1th statistic to calculate percent change on the oldest point
                 if j == 0:
                     macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
                     vars[keys[i]].append(macrov)
@@ -561,49 +632,84 @@ def create_weightings_MSF3(self):
                     macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j - 1]) / \
                              data['statistics'].iloc[j - 1]
                     vars[keys[i]].append(macrov)
-
+    #We now iterate through the instrument ids
     for x in ikeys:
+
+        #This query will grab the quarterly instrument statistics from 2016 to 2018
         query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
                 "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
                 "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2016-01-01' AND '2018-01-01' ) z " \
                 "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
                 "MONTH(z.date) = 12)".format(ikeys[x])
 
+        #Then we execute the query and store the returned values in instrumentStats, and grab the last n stats from the dataframe as we are only using n datapoints
         instrumentStats = pd.read_sql_query(query, self.engine)
-
         instrumentStats = instrumentStats.tail(n)
 
-        avg_percent_errors = []
+        #Best weightings will be used to store the best weightings for each instrument
         best_weightings = [0, 0, 0]
+
+        #Best avg error will be used to store the best average percent error for each isntrument
         best_avg_error = -1
+
+        #Best trend error will be used to store the best trend error for each instrument
         best_trend_error = -1
-        for weight in numpy.arange(0, 2, .1):
+
+        #Best forecast prices will be used to store the forecast prices for the best weightings to store them in a database for visual comparison later
+        best_forecast_prices = []
+
+        #We now iterate through all 3 different possible weightings
+        for weight in numpy.arange(0, 1, .1):
             for uweight in numpy.arange(0, 1, .1):
                 for iweight in numpy.arange(0, 1, .1):
+
+                    #We intialize a list to store the resulting forecasted prices to compare in another function
                     stat_check = []
+
+                    #This is the actual calculation of MSF3 where we store the result in stat_check to compare to actual instrument prices
                     for i in range(n):
                         stat = vars['GDP'][i] * weight - (vars['COVI'][i] * uweight + vars['FSI'][i] * iweight) - (
                                     vars['CPIUC'][i] * vars['CPIUC'][i])
                         stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
                         stat_check.append(stat)
-                        #MAKE SURE STAT IS BETWEEN 0 and 1
 
-                    temp_avg_error, temp_trend_error = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n, 'MSF3')
+                    #We call to the weight check function using the list of forecasted prices, the current instrument id, the amount of datapoints we are working with, and the name of the function we are testing
+                    #It then returns the average percent error and trend error for the forecasted prices, as well as the dates we are forecasting for so we can insert them into the visualize table
+                    temp_avg_error, temp_trend_error, dates = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n, 'MSF3')
+
+                    #Check to see if the best_avg_error has been initialized to a valid average percent error, if not then no average error or trend error has been calculated yet
                     if (best_avg_error < 0):
+                        #So store the average percent error, the best weightings, best trend error, and the resulting forecasted prices for comparison with other weightings
                         best_avg_error = temp_avg_error
                         best_weightings = [weight, uweight, iweight]
                         best_trend_error = temp_trend_error
-                    elif (best_avg_error > temp_avg_error):
-                        best_avg_error = temp_avg_error
-                        best_weightings = [weight, uweight, iweight]
-                        best_trend_error = temp_trend_error
+                        best_forecast_prices = stat_check
 
+                    #Otherwise check if the newly calculated average percent error is worse than the newly calculated one
+                    elif (best_avg_error > temp_avg_error):
+                        #And if so set the values for all the relevant variables
+                        best_avg_error = temp_avg_error
+                        best_weightings = [weight, uweight, iweight]
+                        best_trend_error = temp_trend_error
+                        best_forecast_prices = stat_check
+
+        #Print statements to view the average percent error, trend error, and best weightings
         print("The lowest avg percent error is %.7f%% for instrumentID %d" % (best_avg_error, ikeys[x]), ' for function: MSF3')
         print("The weightings are: ", best_weightings, ' for function: MSF3')
         print('The trend error is: ',  best_trend_error)
 
+        #initializes weightings dictionary as the best weightings found for each instrument id
         weightings[ikeys[x]] = best_weightings
-    print(vars)
+
+        #visual_comparisons will be used to store the past forecasted prices so we can visualize them compared to actual instrument prices on a graph
+        visual_comparisons = []
+        for k in range(n):
+            visual_comparisons.append([dates[k], ikeys[x], best_forecast_prices[k], 'MSF3'])
+
+        df1 = pd.DataFrame(visual_comparisons, columns=['forecastdate', 'instrumentid', 'forecastcloseprice', 'algorithmcode'])
+        df1.to_sql('dbo_tempvisualize', self.engine, if_exists=('append'), index=False)
+
+    #The weightings for each instrument ID are returned to dataforecast and used for prediction
     return weightings
 
 def weight_check(self, calculated_forecast, instrumentid, n, function_name):
@@ -640,7 +746,7 @@ def weight_check(self, calculated_forecast, instrumentid, n, function_name):
     average_percent_error = average_percent_error/n
 
     count = 0
-    # Calculates accuracy
+    # Calculates trend accuracy
     for x in range((len(df) - 1)):
         # Check if upward or downward trend
         if (df['close'][x + 1] > df['close'][x] and df['forecastcloseprice'][x + 1] > df['forecastcloseprice'][
@@ -650,16 +756,16 @@ def weight_check(self, calculated_forecast, instrumentid, n, function_name):
                      x]):
             count += 1
 
-    d = len(df)
-    b = (count / d) * 100
+    length = len(df)
+    trend_error = (count / length) * 100
     #print("Trend accuracy for %s is %.2f%%" % (function_name, b))
     #return the average percent error calculated above
-    return average_percent_error, b
+    return average_percent_error, trend_error, dates
 
 
 db_engine = DBEngine().mysql_engine()
 #arima_accuracy(db_engine)
-accuracy(db_engine)
+#accuracy(db_engine)
 #MSF1_accuracy(db_engine)
 #MSF2_accuracy(db_engine)
 #create_weightings(db_engine)
