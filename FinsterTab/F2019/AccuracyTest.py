@@ -811,8 +811,8 @@ def t_test(self):
 
         #calculating mean of the two algorithms percent error
         mean_MSF2, mean_MSF3 = numpy.mean(MSF2_percent_error), numpy.mean(MSF3_percent_error)
-        mean_MSF2.astype(float)
-        mean_MSF3.astype(float)
+        mean_MSF2.astype('float64')
+        mean_MSF3.astype('float64')
 
 
         paired_samples = len(MSF2_percent_error)
@@ -826,7 +826,7 @@ def t_test(self):
             difference_list.append(difference1[i])
 
         square_difference_df = pd.DataFrame(difference_list, columns=['SquaredDifference'])
-        square_difference_df.astype(float)
+        square_difference_df.astype('float64')
 
 
         # sum difference between observations
@@ -835,7 +835,7 @@ def t_test(self):
             second_diff_list.append(difference2[i])
 
         second_square_df = pd.DataFrame(second_diff_list, columns=['SquaredDifference'])
-        second_square_df.astype(float)
+        second_square_df.astype('float64')
 
 
 
@@ -846,7 +846,18 @@ def t_test(self):
         standard_error = (standard_deviation) / (paired_samples**1/2)
 
         # calculate the t statistic
-        t_stat = (mean_MSF2 - mean_MSF3) / standard_error
+        t_stat_list = []
+        for k in range(n):
+            t_stat = (mean_MSF2 - mean_MSF3) / standard_error
+            absolute_t_stat = [abs(ele) for ele in t_stat]
+            t_stat_list.append(absolute_t_stat[k])
+        t_stat_df = pd.DataFrame(t_stat_list, columns=['T-stats'])
+        print(t_stat_df)
+
+
+
+
+
 
         # degrees of freedom
         freedom = paired_samples - 1
@@ -855,34 +866,37 @@ def t_test(self):
         alpha = 0.05
         critical_val = t.ppf(1.0 - alpha, freedom)
 
-        #calculate the p-value
-        p = (1.0 - t.cdf(abs(t_stat), freedom)) * 2.0
-
-
-        t_stat.astype('float64')
-
+        # #calculate the p-value
+        # for k in range(n):
+        #     p = (1.0 - t.cdf(t_stat_df['T-stats'], freedom)) * 2.0
 
 
 
-    #     # interpret via critical value
-    # if abs(t_stat).any() <= critical_val:
-    #
-    #     print("Accept null hypothesis that the means are equal.")
-    #
-    # else:
-    #     print("Reject the null hypothesis that the means are equal.")
 
 
-        # interpret via p-value
-    if p.any() > alpha:
+
+    if t_stat_df['T-stats'].any() <= critical_val:
 
         print("Accept null hypothesis that the means are equal.")
+        print("A significant difference does not exist.")
 
     else:
-
         print("Reject the null hypothesis that the means are equal.")
+        print("A signifcant difference does exist.")
 
 
+    #     # interpret via p-value
+    # if p.any() < alpha:
+    #
+    #     print("Reject the null hypothesis that the means are equal.")
+    #     print("A significant difference does exist.")
+    #
+    # else:
+    #
+    #     print("Accept null hypothesis that the means are equal.")
+    #     print("A significant difference does not exist.")
+    #
+    #
 
 
 
