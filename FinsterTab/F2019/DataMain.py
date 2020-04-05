@@ -5,6 +5,7 @@ from FinsterTab.F2019.dbEngine import DBEngine
 from FinsterTab.F2019.BuySell import BuySell
 from FinsterTab.F2019.EngineeredFeatures import EngineeredFeatures
 from FinsterTab.F2019.TradingSimulator import TradingSimulator
+import FinsterTab.F2019.AccuracyTest
 
 
 
@@ -33,6 +34,8 @@ DataFetch.macroFetch(db_engine)
 DataForecast.MSF1(db_engine)
 DataForecast.MSF2(db_engine)
 DataForecast.MSF3(db_engine)
+
+
 
 # calculate technical indicators and store in EngineeredFeatures
 indicators = EngineeredFeatures(db_engine, instrument_master)

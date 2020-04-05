@@ -784,6 +784,9 @@ class DataForecast:
         # Initialize a variable to the current year
         year = currentDate.year
 
+        #Prints out the accuracy figures, not necessary can be commented out
+        FinsterTab.F2019.AccuracyTest.MSF1_accuracy(self.engine)
+
         # Setup a for loop to loop through and append the date list with the date of the start of the next quarter
         # For loop will run n times, corresponding to amount of data points we are working with
         for i in range(n):
@@ -846,25 +849,25 @@ class DataForecast:
 
                 #Retrieves Relevant Data from Database
 
-                query = 'SELECT * FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format('"' + str(x) + '"')     #Queries the DB to retrieeve the macoeconstatistics (currently just for GDP)
-                df = pd.read_sql_query(query, self.engine)                                                              #Executes the query and stores the result in a dataframe variable
-                macro = df.tail(n)                                                                                      #Retrieves the last n rows of the dataframe variable and stores it in GDP, a new dataframe variable
-                SP = df2.tail(n)                                                                                        #Performs same operation, this is because we only want to work with a set amount of data points for now
-                temp = df.tail(n+1)                                                                                     #Retrieves the nth + 1 row from the GDP tables so we can calculate percent change of the first GDP value
-                temp = temp.reset_index()                                                                               #Resets the index so it is easy to work with
+                query = 'SELECT * FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format('"' + str(x) + '"')
+                df = pd.read_sql_query(query, self.engine)
+                macro = df.tail(n)
+                SP = df2.tail(n)
+                temp = df.tail(n+1)
+                temp = temp.reset_index()
 
                 #Converts macro variables to precent change
-                macroPercentChange = macro                                                                              #Creates a new dataframe variable and initializes to the GDP table of n rows
-                macro = macro.reset_index(drop=True)                                                                    #Resets the index of the GDP dataframe so it is easy to work with
-                SP = SP.reset_index(drop=True)                                                                          #Same here
-                macroPercentChange = macroPercentChange.reset_index(drop=True)                                          #And same here as well
+                macroPercentChange = macro
+                macro = macro.reset_index(drop=True)
+                SP = SP.reset_index(drop=True)
+                macroPercentChange = macroPercentChange.reset_index(drop=True)
 
-                for i in range(0, n):                                                                                   #Creates a for loop to calculate the percent change
+                for i in range(0, n):
 
-                    if (i == 0):                                                                                        #On the first iteration grab the extra row stored in temp to compute the first GDP % change value of the table
+                    if (i == 0):
                         macrov = (macro['statistics'][i]-temp['statistics'][i])/temp['statistics'][i]
                         macroPercentChange['statistics'].iloc[i] = macrov * 100
-                    else:                                                                                               #If it is not the first iteration then calculate % change using previous row as normal
+                    else:
                         macrov = (macro['statistics'][i]-macro['statistics'][i - 1])/macro['statistics'][i - 1]
                         macroPercentChange['statistics'].iloc[i] = macrov * 100
 
