@@ -8,6 +8,7 @@ from statistics import stdev
 import numpy as np
 import xgboost as xgb
 from datetime import *
+import datetime as dt
 import sqlalchemy as sal
 from sklearn.model_selection import train_test_split    # not used at this time
 from sklearn.linear_model import LinearRegression
@@ -1099,7 +1100,8 @@ class DataForecast:
         weightings = accuracytest.create_weightings_MSF3(self.engine)
         currentDate = str(
             datetime.today())  # Initiailizes a variable to represent today's date, used to fetch forecast dates
-        currentDate = ("'" + currentDate + "'")
+        #currentDate = ("'" + currentDate + "'")
+        currentDate = "2008-01-01"
 
         n = 8
         for i in range(len(data)):
@@ -1130,9 +1132,9 @@ class DataForecast:
 
             query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
                     "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
-                    "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2014-03-21' AND {} ) z " \
+                    "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2005-04-06' AND '2007-12-31' ) z " \
                     "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
-                    "MONTH(z.date) = 12)".format(ikeys[x], currentDate)
+                    "MONTH(z.date) = 12)".format(ikeys[x])
 
             instrumentStats = pd.read_sql_query(query, self.engine)
 
@@ -1151,11 +1153,10 @@ class DataForecast:
             result[ikeys[x]].append(Y)
 
         # Getting Dates for Future Forecast
-        currentDate = datetime.today()
+        currentDate = dt.datetime(2008, 1, 1)
         date = []  # Creates a list to store future forecast dates
         count = 0
-        if (
-                currentDate.month < 4):  # This will set the value of count according to which month we are in, this is to avoid having past forecast dates in the list
+        if (currentDate.month < 4):  # This will set the value of count according to which month we are in, this is to avoid having past forecast dates in the list
             count = 0
         elif (currentDate.month < 7 and currentDate.month >= 4):
             count = 1

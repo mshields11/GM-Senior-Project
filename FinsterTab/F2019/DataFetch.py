@@ -1,6 +1,7 @@
 # Import Libraries to be used in this code module
 import pandas_datareader.data as dr               # pandas library for data manipulation and analysis
 import pandas as pd
+import datetime as dt
 from datetime import datetime, timedelta, date    # library for date and time calculations
 import sqlalchemy as sal                          # SQL toolkit, Object-Relational Mapper for Python
 from pandas.tseries.holiday import get_calendar, HolidayCalendarFactory, GoodFriday  # calendar module to use a pre-configured calendar
@@ -39,10 +40,12 @@ class DataFetch:
         Store data in MySQL database
         :param sources: provides ticker symbols of instruments being tracked
         """
-        now = datetime.now()  # Date Variables
+        now = dt.date(2008,1,1) # Date Variables
 
-        start = datetime.now()-timedelta(days=self.datalength)  # get date value from 3 years ago
-        end = now.strftime("%Y-%m-%d")
+        start = now-timedelta(days=1000)  # get date value from 3 years ago
+        end = now
+        print(sources)
+        print(now, start, end)
 
         # Cycle through each ticker symbol
         for n in range(len(sources)):
@@ -80,9 +83,12 @@ class DataFetch:
         truncate_query = 'TRUNCATE TABLE dbo_datedim'
         self.engine.execute(truncate_query)
 
+        currentDate = dt.datetime(2008, 1, 1)
+
         # 3 years of past data and up to 1 year of future forecasts
-        begin = date.today() - timedelta(days=self.datalength)
-        end = date.today() + timedelta(days=365)
+        begin = currentDate - timedelta(days=1000)
+        end = currentDate + timedelta(days=1200)
+
 
         # list of US holidays
         cal = get_calendar('USFederalHolidayCalendar')  # Create calendar instance
@@ -95,7 +101,7 @@ class DataFetch:
         holidays = tradingHolidays.holidays(begin, end)
 
         # 3 years of past data
-        day = date.today() - timedelta(days=self.datalength)
+        day = begin
 
         while day < end:
             date_query = 'INSERT INTO dbo_datedim VALUES({},{},{},{},{},{})'   # insert query into the database

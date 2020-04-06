@@ -21,15 +21,15 @@ ticker_symbols = master_data.get_datasources()
 # get data from Yahoo! Finance and store in InstrumentStatistics
 master_data.get_data(ticker_symbols)
 
-# get date data and store in DateDim, replaced the SQL calendar code
+# # get date data and store in DateDim, replaced the SQL calendar code
 master_data.get_calendar()
 
 #Macro Economic Variable Functions
 # DataFetch.macroFetch(db_engine)
-DataForecast.MacroEconIndForecast(db_engine)
+#DataForecast.MacroEconIndForecast(db_engine)
 # DataForecast.MacroEconCombForecast(db_engine)
-# DataForecast.MSF3(db_engine)
-# exit(1)
+DataForecast.MSF3(db_engine)
+exit(1)
 
 # calculate technical indicators and store in EngineeredFeatures
 indicators = EngineeredFeatures(db_engine, instrument_master)
@@ -37,10 +37,11 @@ indicators = EngineeredFeatures(db_engine, instrument_master)
 
 indicators.calculate()
 
-# Get Raw Data from database to calculate forecasts
+# get Raw Data from database to calculate forecasts
 forecast = DataForecast(db_engine, instrument_master)
+
+# calculate regression
 forecast.calculate_regression()
-exit(1  )
 # calculate and store price predictions
 forecast.calculate_forecast()
 

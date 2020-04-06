@@ -466,7 +466,7 @@ def create_weightings_MSF3(self):
     for i in data1['instrumentid']:
         d = {i: []}
         result.update(d)
-
+    print(result)
     currentDate = str(
         datetime.today())  # Initiailizes a variable to represent today's date, used to fetch forecast dates
     currentDate = ("'" + currentDate + "'")
@@ -499,12 +499,12 @@ def create_weightings_MSF3(self):
 
         query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
                 "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
-                "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2016-01-01' AND '2018-01-01' ) z " \
+                "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2005-04-06' AND '2007-12-31' ) z " \
                 "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
                 "MONTH(z.date) = 12)".format(ikeys[x])
 
         instrumentStats = pd.read_sql_query(query, self.engine)
-
+        print(instrumentStats)
         instrumentStats = instrumentStats.tail(n)
 
         avg_percent_errors = []
@@ -517,6 +517,7 @@ def create_weightings_MSF3(self):
                     for i in range(n):
                         stat = vars['GDP'][i] * weight - (vars['COVI'][i] * uweight + vars['FSI'][i] * iweight) - (
                                 vars['CPIUC'][i] * vars['CPIUC'][i])
+
                         stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
                         stat_check.append(stat)
                     if (best_avg_error < 0):
@@ -536,7 +537,7 @@ def create_weightings_MSF3(self):
 def weight_check(self, calculated_forecast, instrumentid, n):
     query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentID, ROW_NUMBER() OVER " \
             "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
-            "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2018-01-01' AND '2020-01-01' ) z " \
+            "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2005-04-06' AND '2007-12-31' ) z " \
             "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
             "MONTH(z.date) = 12)".format(instrumentid)
     check_data = pd.read_sql_query(query, self.engine)

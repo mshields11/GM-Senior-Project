@@ -6538,253 +6538,6 @@
         <column-instance column='[forecastcloseprice]' derivation='Sum' name='[sum:forecastcloseprice:qk]' pivot='key' type='quantitative' />
       </datasource-dependencies>
     </datasource>
-    <datasource caption='FORECAST_IN_TABLEAU_Regression' inline='true' name='federated.1j8mnxr1iox4jq192y4uu1jqt0w2 (copy)' version='18.1'>
-      <connection class='federated'>
-        <named-connections>
-          <named-connection caption='localhost' name='mysql.0cjm3h713qi7ie14cbbl81olaugl (copy)'>
-            <connection class='mysql' dbname='gmfsp_db' odbc-native-protocol='' one-time-sql='' port='3306' server='localhost' source-charset='' username='root' />
-          </named-connection>
-        </named-connections>
-        <relation join='left' type='join'>
-          <clause type='join'>
-            <expression op='AND'>
-              <expression op='='>
-                <expression op='[RandomForest].[date]' />
-                <expression op='[Main].[date]' />
-              </expression>
-              <expression op='='>
-                <expression op='[RandomForest].[instrumentid]' />
-                <expression op='[Main].[instrumentid]' />
-              </expression>
-            </expression>
-          </clause>
-          <relation connection='mysql.0cjm3h713qi7ie14cbbl81olaugl (copy)' name='RandomForest' type='text'>&#10;select d.`date`, &#13;&#10;       a.instrumentid, &#13;&#10;&#9;   a.forecastcloseprice,&#13;&#10;&#9;   a.algorithmcode,&#13;&#10;       a.prederror,&#13;&#10;       m.instrumentname&#13;&#10;&#13;&#10;FROM dbo_datedim as d&#13;&#10;      left outer join dbo_algorithmforecast    as a on d.`date` = a.forecastdate&#13;&#10;      left outer join dbo_instrumentmaster     as m on a.instrumentid = m.instrumentid&#13;&#10;&#13;&#10;where d.weekend = 0 and &#13;&#10;      d.isholiday = 0 and&#13;&#10;      a.algorithmcode = &apos;regression&apos;      </relation>
-          <relation connection='mysql.0cjm3h713qi7ie14cbbl81olaugl (copy)' name='Main' type='text'>&#10;/*Main*/&#13;&#10;select d.`date`, &#13;&#10;       i.instrumentid, &#13;&#10;&#9;   i.`Adj Close`         as adjclose,&#13;&#10;       i.`close`&#13;&#10;       &#13;&#10;FROM dbo_datedim as d&#13;&#10;      left outer join dbo_instrumentstatistics as i on d.`date` = i.`date`&#13;&#10;&#13;&#10;where d.weekend = 0 and &#13;&#10;      d.isholiday = 0      </relation>
-        </relation>
-        <cols>
-          <map key='[adjclose]' value='[Main].[adjclose]' />
-          <map key='[algorithmcode]' value='[RandomForest].[algorithmcode]' />
-          <map key='[close]' value='[Main].[close]' />
-          <map key='[date (Custom SQL Query)]' value='[Main].[date]' />
-          <map key='[date]' value='[RandomForest].[date]' />
-          <map key='[forecastcloseprice]' value='[RandomForest].[forecastcloseprice]' />
-          <map key='[instrumentid (Custom SQL Query)]' value='[Main].[instrumentid]' />
-          <map key='[instrumentid]' value='[RandomForest].[instrumentid]' />
-          <map key='[instrumentname]' value='[RandomForest].[instrumentname]' />
-          <map key='[prederror]' value='[RandomForest].[prederror]' />
-        </cols>
-        <metadata-records>
-          <metadata-record class='column'>
-            <remote-name>date</remote-name>
-            <remote-type>7</remote-type>
-            <local-name>[date]</local-name>
-            <parent-name>[RandomForest]</parent-name>
-            <remote-alias>date</remote-alias>
-            <ordinal>1</ordinal>
-            <local-type>date</local-type>
-            <aggregation>Year</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_DATE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_DATE&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>instrumentid</remote-name>
-            <remote-type>3</remote-type>
-            <local-name>[instrumentid]</local-name>
-            <parent-name>[RandomForest]</parent-name>
-            <remote-alias>instrumentid</remote-alias>
-            <ordinal>2</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_INTEGER&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_SLONG&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>forecastcloseprice</remote-name>
-            <remote-type>4</remote-type>
-            <local-name>[forecastcloseprice]</local-name>
-            <parent-name>[RandomForest]</parent-name>
-            <remote-alias>forecastcloseprice</remote-alias>
-            <ordinal>3</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_REAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_FLOAT&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>algorithmcode</remote-name>
-            <remote-type>130</remote-type>
-            <local-name>[algorithmcode]</local-name>
-            <parent-name>[RandomForest]</parent-name>
-            <remote-alias>algorithmcode</remote-alias>
-            <ordinal>4</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>50</width>
-            <contains-null>true</contains-null>
-            <collation charset='296' flag='3' name='LROOT_S1' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_WVARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_WCHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>prederror</remote-name>
-            <remote-type>4</remote-type>
-            <local-name>[prederror]</local-name>
-            <parent-name>[RandomForest]</parent-name>
-            <remote-alias>prederror</remote-alias>
-            <ordinal>5</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_REAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_FLOAT&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>instrumentname</remote-name>
-            <remote-type>130</remote-type>
-            <local-name>[instrumentname]</local-name>
-            <parent-name>[RandomForest]</parent-name>
-            <remote-alias>instrumentname</remote-alias>
-            <ordinal>6</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>50</width>
-            <contains-null>true</contains-null>
-            <collation charset='296' flag='3' name='LROOT_S1' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_WVARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_WCHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>date</remote-name>
-            <remote-type>7</remote-type>
-            <local-name>[date (Custom SQL Query)]</local-name>
-            <parent-name>[Main]</parent-name>
-            <remote-alias>date</remote-alias>
-            <ordinal>8</ordinal>
-            <local-type>date</local-type>
-            <aggregation>Year</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_DATE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_DATE&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>instrumentid</remote-name>
-            <remote-type>20</remote-type>
-            <local-name>[instrumentid (Custom SQL Query)]</local-name>
-            <parent-name>[Main]</parent-name>
-            <remote-alias>instrumentid</remote-alias>
-            <ordinal>9</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_BIGINT&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_SBIGINT&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>adjclose</remote-name>
-            <remote-type>4</remote-type>
-            <local-name>[adjclose]</local-name>
-            <parent-name>[Main]</parent-name>
-            <remote-alias>adjclose</remote-alias>
-            <ordinal>10</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_REAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_FLOAT&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>close</remote-name>
-            <remote-type>4</remote-type>
-            <local-name>[close]</local-name>
-            <parent-name>[Main]</parent-name>
-            <remote-alias>close</remote-alias>
-            <ordinal>11</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_REAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_FLOAT&quot;</attribute>
-            </attributes>
-          </metadata-record>
-        </metadata-records>
-      </connection>
-      <aliases enabled='yes' />
-      <column datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
-        <calculation class='tableau' formula='1' />
-      </column>
-      <column datatype='real' name='[adjclose]' role='measure' type='quantitative' />
-      <column caption='Close' datatype='real' name='[close]' role='measure' type='quantitative' />
-      <column caption='Forecast Close' datatype='real' name='[forecastcloseprice]' role='measure' type='quantitative' />
-      <column caption='Instrument' datatype='string' name='[instrumentname]' role='dimension' type='nominal' />
-      <column-instance column='[adjclose]' derivation='Sum' name='[sum:adjclose:qk]' pivot='key' type='quantitative' />
-      <column-instance column='[close]' derivation='Sum' name='[sum:close:qk]' pivot='key' type='quantitative' />
-      <column-instance column='[forecastcloseprice]' derivation='Sum' name='[sum:forecastcloseprice:qk]' pivot='key' type='quantitative' />
-      <layout dim-ordering='alphabetic' dim-percentage='0.508639' measure-ordering='alphabetic' measure-percentage='0.491361' show-structure='true' user-set-layout='true' />
-      <style>
-        <style-rule element='mark'>
-          <encoding attr='color' field='[:Measure Names]' type='palette'>
-            <map to='#1f77b4'>
-              <bucket>&quot;[federated.1j8mnxr1iox4jq192y4uu1jqt0w2 (copy)].[sum:close:qk]&quot;</bucket>
-            </map>
-            <map to='#1f77b4'>
-              <bucket>&quot;[federated.1l8snl202yyjy419wekca1na34ou].[sum:close:qk]&quot;</bucket>
-            </map>
-            <map to='#2ca02c'>
-              <bucket>&quot;[federated.1j8mnxr1iox4jq192y4uu1jqt0w2 (copy)].[sum:forecastcloseprice:qk]&quot;</bucket>
-            </map>
-            <map to='#9467bd'>
-              <bucket>&quot;[federated.0nzmwfa0imfakq1avnw3m0x6mpwr].[sum:close:qk]&quot;</bucket>
-            </map>
-            <map to='#d62728'>
-              <bucket>&quot;[federated.1j8mnxr1iox4jq192y4uu1jqt0w2 (copy)]&quot;</bucket>
-            </map>
-            <map to='#e377c2'>
-              <bucket>&quot;[federated.1j8mnxr1iox4jq192y4uu1jqt0w2 (copy)].[sum:adjclose:qk]&quot;</bucket>
-            </map>
-            <map to='#ff7f0e'>
-              <bucket>&quot;[federated.1l8snl202yyjy419wekca1na34ou].[sum:forecastcloseprice:qk]&quot;</bucket>
-            </map>
-          </encoding>
-        </style-rule>
-      </style>
-      <semantic-values>
-        <semantic-value key='[Country].[Name]' value='&quot;United States&quot;' />
-      </semantic-values>
-      <datasource-dependencies datasource='federated.0nzmwfa0imfakq1avnw3m0x6mpwr'>
-        <column datatype='real' name='[close]' role='measure' type='quantitative' />
-        <column-instance column='[close]' derivation='Sum' name='[sum:close:qk]' pivot='key' type='quantitative' />
-      </datasource-dependencies>
-      <datasource-dependencies datasource='federated.1l8snl202yyjy419wekca1na34ou'>
-        <column datatype='real' name='[close]' role='measure' type='quantitative' />
-        <column datatype='real' name='[forecastcloseprice]' role='measure' type='quantitative' />
-        <column-instance column='[close]' derivation='Sum' name='[sum:close:qk]' pivot='key' type='quantitative' />
-        <column-instance column='[forecastcloseprice]' derivation='Sum' name='[sum:forecastcloseprice:qk]' pivot='key' type='quantitative' />
-      </datasource-dependencies>
-    </datasource>
     <datasource caption='BUY_SELL_SIGNALS_IN_TABLEAU_FRL' inline='true' name='federated.1njo7ie10dbaos1fiz2fu0oyi1pe' version='18.1'>
       <connection class='federated'>
         <named-connections>
@@ -7658,6 +7411,253 @@
         <column-instance column='[forecastcloseprice]' derivation='Sum' name='[sum:forecastcloseprice:qk]' pivot='key' type='quantitative' />
       </datasource-dependencies>
     </datasource>
+    <datasource caption='FORECAST_IN_TABLEAU_Regression' inline='true' name='federated.1j8mnxr1iox4jq192y4uu1jqt0w2 (copy)' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='localhost' name='mysql.0cjm3h713qi7ie14cbbl81olaugl (copy)'>
+            <connection class='mysql' dbname='gmfsp_db' odbc-native-protocol='' one-time-sql='' port='3306' server='localhost' source-charset='' username='root' />
+          </named-connection>
+        </named-connections>
+        <relation join='left' type='join'>
+          <clause type='join'>
+            <expression op='AND'>
+              <expression op='='>
+                <expression op='[RandomForest].[date]' />
+                <expression op='[Main].[date]' />
+              </expression>
+              <expression op='='>
+                <expression op='[RandomForest].[instrumentid]' />
+                <expression op='[Main].[instrumentid]' />
+              </expression>
+            </expression>
+          </clause>
+          <relation connection='mysql.0cjm3h713qi7ie14cbbl81olaugl (copy)' name='RandomForest' type='text'>&#10;select d.`date`, &#13;&#10;       a.instrumentid, &#13;&#10;&#9;   a.forecastcloseprice,&#13;&#10;&#9;   a.algorithmcode,&#13;&#10;       a.prederror,&#13;&#10;       m.instrumentname&#13;&#10;&#13;&#10;FROM dbo_datedim as d&#13;&#10;      left outer join dbo_algorithmforecast    as a on d.`date` = a.forecastdate&#13;&#10;      left outer join dbo_instrumentmaster     as m on a.instrumentid = m.instrumentid&#13;&#10;&#13;&#10;where d.weekend = 0 and &#13;&#10;      d.isholiday = 0 and&#13;&#10;      a.algorithmcode = &apos;regression&apos;      </relation>
+          <relation connection='mysql.0cjm3h713qi7ie14cbbl81olaugl (copy)' name='Main' type='text'>&#10;/*Main*/&#13;&#10;select d.`date`, &#13;&#10;       i.instrumentid, &#13;&#10;&#9;   i.`Adj Close`         as adjclose,&#13;&#10;       i.`close`&#13;&#10;       &#13;&#10;FROM dbo_datedim as d&#13;&#10;      left outer join dbo_instrumentstatistics as i on d.`date` = i.`date`&#13;&#10;&#13;&#10;where d.weekend = 0 and &#13;&#10;      d.isholiday = 0      </relation>
+        </relation>
+        <cols>
+          <map key='[adjclose]' value='[Main].[adjclose]' />
+          <map key='[algorithmcode]' value='[RandomForest].[algorithmcode]' />
+          <map key='[close]' value='[Main].[close]' />
+          <map key='[date (Custom SQL Query)]' value='[Main].[date]' />
+          <map key='[date]' value='[RandomForest].[date]' />
+          <map key='[forecastcloseprice]' value='[RandomForest].[forecastcloseprice]' />
+          <map key='[instrumentid (Custom SQL Query)]' value='[Main].[instrumentid]' />
+          <map key='[instrumentid]' value='[RandomForest].[instrumentid]' />
+          <map key='[instrumentname]' value='[RandomForest].[instrumentname]' />
+          <map key='[prederror]' value='[RandomForest].[prederror]' />
+        </cols>
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>date</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[date]</local-name>
+            <parent-name>[RandomForest]</parent-name>
+            <remote-alias>date</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>date</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_DATE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_DATE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>instrumentid</remote-name>
+            <remote-type>3</remote-type>
+            <local-name>[instrumentid]</local-name>
+            <parent-name>[RandomForest]</parent-name>
+            <remote-alias>instrumentid</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_INTEGER&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_SLONG&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>forecastcloseprice</remote-name>
+            <remote-type>4</remote-type>
+            <local-name>[forecastcloseprice]</local-name>
+            <parent-name>[RandomForest]</parent-name>
+            <remote-alias>forecastcloseprice</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_REAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_FLOAT&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>algorithmcode</remote-name>
+            <remote-type>130</remote-type>
+            <local-name>[algorithmcode]</local-name>
+            <parent-name>[RandomForest]</parent-name>
+            <remote-alias>algorithmcode</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>50</width>
+            <contains-null>true</contains-null>
+            <collation charset='296' flag='3' name='LROOT_S1' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_WVARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_WCHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>prederror</remote-name>
+            <remote-type>4</remote-type>
+            <local-name>[prederror]</local-name>
+            <parent-name>[RandomForest]</parent-name>
+            <remote-alias>prederror</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_REAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_FLOAT&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>instrumentname</remote-name>
+            <remote-type>130</remote-type>
+            <local-name>[instrumentname]</local-name>
+            <parent-name>[RandomForest]</parent-name>
+            <remote-alias>instrumentname</remote-alias>
+            <ordinal>6</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>50</width>
+            <contains-null>true</contains-null>
+            <collation charset='296' flag='3' name='LROOT_S1' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_WVARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_WCHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>date</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[date (Custom SQL Query)]</local-name>
+            <parent-name>[Main]</parent-name>
+            <remote-alias>date</remote-alias>
+            <ordinal>8</ordinal>
+            <local-type>date</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_DATE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_DATE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>instrumentid</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[instrumentid (Custom SQL Query)]</local-name>
+            <parent-name>[Main]</parent-name>
+            <remote-alias>instrumentid</remote-alias>
+            <ordinal>9</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_BIGINT&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_SBIGINT&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>adjclose</remote-name>
+            <remote-type>4</remote-type>
+            <local-name>[adjclose]</local-name>
+            <parent-name>[Main]</parent-name>
+            <remote-alias>adjclose</remote-alias>
+            <ordinal>10</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_REAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_FLOAT&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>close</remote-name>
+            <remote-type>4</remote-type>
+            <local-name>[close]</local-name>
+            <parent-name>[Main]</parent-name>
+            <remote-alias>close</remote-alias>
+            <ordinal>11</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_REAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_FLOAT&quot;</attribute>
+            </attributes>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
+        <calculation class='tableau' formula='1' />
+      </column>
+      <column datatype='real' name='[adjclose]' role='measure' type='quantitative' />
+      <column caption='Close' datatype='real' name='[close]' role='measure' type='quantitative' />
+      <column caption='Forecast Close' datatype='real' name='[forecastcloseprice]' role='measure' type='quantitative' />
+      <column caption='Instrument' datatype='string' name='[instrumentname]' role='dimension' type='nominal' />
+      <column-instance column='[adjclose]' derivation='Sum' name='[sum:adjclose:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[close]' derivation='Sum' name='[sum:close:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[forecastcloseprice]' derivation='Sum' name='[sum:forecastcloseprice:qk]' pivot='key' type='quantitative' />
+      <layout dim-ordering='alphabetic' dim-percentage='0.509383' measure-ordering='alphabetic' measure-percentage='0.490617' show-structure='true' user-set-layout='true' />
+      <style>
+        <style-rule element='mark'>
+          <encoding attr='color' field='[:Measure Names]' type='palette'>
+            <map to='#1f77b4'>
+              <bucket>&quot;[federated.1j8mnxr1iox4jq192y4uu1jqt0w2 (copy)].[sum:close:qk]&quot;</bucket>
+            </map>
+            <map to='#1f77b4'>
+              <bucket>&quot;[federated.1l8snl202yyjy419wekca1na34ou].[sum:close:qk]&quot;</bucket>
+            </map>
+            <map to='#2ca02c'>
+              <bucket>&quot;[federated.1j8mnxr1iox4jq192y4uu1jqt0w2 (copy)].[sum:forecastcloseprice:qk]&quot;</bucket>
+            </map>
+            <map to='#9467bd'>
+              <bucket>&quot;[federated.0nzmwfa0imfakq1avnw3m0x6mpwr].[sum:close:qk]&quot;</bucket>
+            </map>
+            <map to='#d62728'>
+              <bucket>&quot;[federated.1j8mnxr1iox4jq192y4uu1jqt0w2 (copy)]&quot;</bucket>
+            </map>
+            <map to='#e377c2'>
+              <bucket>&quot;[federated.1j8mnxr1iox4jq192y4uu1jqt0w2 (copy)].[sum:adjclose:qk]&quot;</bucket>
+            </map>
+            <map to='#ff7f0e'>
+              <bucket>&quot;[federated.1l8snl202yyjy419wekca1na34ou].[sum:forecastcloseprice:qk]&quot;</bucket>
+            </map>
+          </encoding>
+        </style-rule>
+      </style>
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;United States&quot;' />
+      </semantic-values>
+      <datasource-dependencies datasource='federated.0nzmwfa0imfakq1avnw3m0x6mpwr'>
+        <column datatype='real' name='[close]' role='measure' type='quantitative' />
+        <column-instance column='[close]' derivation='Sum' name='[sum:close:qk]' pivot='key' type='quantitative' />
+      </datasource-dependencies>
+      <datasource-dependencies datasource='federated.1l8snl202yyjy419wekca1na34ou'>
+        <column datatype='real' name='[close]' role='measure' type='quantitative' />
+        <column datatype='real' name='[forecastcloseprice]' role='measure' type='quantitative' />
+        <column-instance column='[close]' derivation='Sum' name='[sum:close:qk]' pivot='key' type='quantitative' />
+        <column-instance column='[forecastcloseprice]' derivation='Sum' name='[sum:forecastcloseprice:qk]' pivot='key' type='quantitative' />
+      </datasource-dependencies>
+    </datasource>
     <datasource caption='Macro_GDP' inline='true' name='federated.00obi6419y2wx811fb67n0plxhzz' version='18.1'>
       <connection class='federated'>
         <named-connections>
@@ -7729,7 +7729,7 @@
         </aliases>
       </column>
       <column-instance column='[macroeconcode]' derivation='None' name='[none:macroeconcode:nk]' pivot='key' type='nominal' />
-      <layout dim-ordering='alphabetic' dim-percentage='0.50108' measure-ordering='alphabetic' measure-percentage='0.49892' show-aliased-fields='true' show-structure='true' />
+      <layout dim-ordering='alphabetic' dim-percentage='0.501341' measure-ordering='alphabetic' measure-percentage='0.49866' show-aliased-fields='true' show-structure='true' />
       <style>
         <style-rule element='mark'>
           <encoding attr='color' field='[none:macroeconcode:nk]' type='palette'>
@@ -7898,7 +7898,7 @@
       <column-instance column='[Calculation_2236037240445517840]' derivation='None' name='[none:Calculation_2236037240445517840:nk]' pivot='key' type='nominal' />
       <column-instance column='[Forecast Indicator]' derivation='None' forecast-column-base='[Forecast Indicator]' forecast-column-type='forecast-indicator' name='[none:Forecast Indicator:nk]' pivot='key' type='nominal' />
       <column-instance column='[instrumentname]' derivation='None' name='[none:instrumentname:nk]' pivot='key' type='nominal' />
-      <layout dim-ordering='alphabetic' dim-percentage='0.618791' measure-ordering='alphabetic' measure-percentage='0.381209' rowDisplayCount='12000' show-aliased-fields='true' show-structure='true' user-set-layout='true' />
+      <layout dim-ordering='alphabetic' dim-percentage='0.621984' measure-ordering='alphabetic' measure-percentage='0.378016' rowDisplayCount='12000' show-aliased-fields='true' show-structure='true' user-set-layout='true' />
       <style>
         <style-rule element='mark'>
           <encoding attr='color' field='[attr:Forecast Indicator:nk]' type='palette'>
@@ -7970,10 +7970,171 @@
         </manual-sort>
       </default-sorts>
     </datasource>
+    <datasource caption='Past Events' inline='true' name='federated.1myzhrn02netnr1dfp2h101982wo' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='localhost' name='mysql.18zwe370rcbw5613ce0of0eh2x07'>
+            <connection class='mysql' dbname='gmfsp_db' odbc-native-protocol='' one-time-sql='' port='3306' server='localhost' source-charset='' username='root' />
+          </named-connection>
+        </named-connections>
+        <relation connection='mysql.18zwe370rcbw5613ce0of0eh2x07' name='Custom SQL Query' type='text'>SELECT&#9;a.forecastdate as date,&#13;&#10;&#9;&#9;a.forecastPrice as close,&#13;&#10;&#9;&#9;a.macroeconcode,&#13;&#10;&#9;&#9;a.instrumentID,&#13;&#10;&#9;&#9;m.instrumentname&#13;&#10;&#13;&#10;FROM&#9;dbo_macroeconalgorithmforecast as a&#13;&#10;&#9;&#9;left outer join dbo_instrumentmaster as m on a.instrumentID = m.instrumentid&#13;&#10;&#13;&#10;WHERE a.forecastPrice &lt;&lt; 200 AND a.instrumentID = 3&#13;&#10;&#13;&#10;UNION ALL&#13;&#10;&#13;&#10;SELECT&#9;x.date,&#13;&#10;&#9;&#9;x.close,&#13;&#10;&#9;&#9;&apos;Stock Price&apos; as macroeconcode,&#13;&#10;&#9;&#9;x.instrumentID,&#13;&#10;&#9;&#9;m.instrumentname&#13;&#10;        &#13;&#10;FROM&#9;dbo_instrumentstatistics as x&#13;&#10;&#9;&#9;left outer join dbo_instrumentmaster as m on x.instrumentID = m.instrumentid&#13;&#10;           &#13;&#10;WHERE YEAR(date) &lt;&lt; YEAR(current_time())-2 &#13;&#10;&#13;&#10;GROUP by MONTH(date), YEAR(date), instrumentid</relation>
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>date</remote-name>
+            <remote-type>130</remote-type>
+            <local-name>[date]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>date</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>65535</width>
+            <contains-null>true</contains-null>
+            <cast-to-local-type>true</cast-to-local-type>
+            <collation charset='296' flag='3' name='LROOT_S1' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_WLONGVARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_WCHAR&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>close</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[close]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>close</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>macroeconcode</remote-name>
+            <remote-type>130</remote-type>
+            <local-name>[macroeconcode]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>macroeconcode</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>65535</width>
+            <contains-null>true</contains-null>
+            <cast-to-local-type>true</cast-to-local-type>
+            <collation charset='296' flag='3' name='LROOT_S1' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_WLONGVARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_WCHAR&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>instrumentID</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[instrumentID]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>instrumentID</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_BIGINT&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_SBIGINT&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>instrumentname</remote-name>
+            <remote-type>130</remote-type>
+            <local-name>[instrumentname]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>instrumentname</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>50</width>
+            <contains-null>true</contains-null>
+            <collation charset='296' flag='3' name='LROOT_S1' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_WVARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_WCHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column caption='Legend' datatype='string' name='[Calculation_1445936992522231809]' role='dimension' type='nominal'>
+        <calculation class='tableau' formula='IF [macroeconcode] = &apos;Stock Price&apos;&#13;&#10;THEN &quot;BLUE&quot;&#13;&#10;ELSE &quot;ORANGE&quot;&#13;&#10;END' />
+      </column>
+      <column datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
+        <calculation class='tableau' formula='1' />
+      </column>
+      <column datatype='date' datatype-customized='true' name='[date]' role='dimension' type='ordinal' />
+      <column datatype='string' name='[macroeconcode]' role='dimension' type='nominal'>
+        <aliases>
+          <alias key='&quot;ALL&quot;' value='MSF3' />
+        </aliases>
+      </column>
+      <column-instance column='[Calculation_1445936992522231809]' derivation='Attribute' name='[attr:Calculation_1445936992522231809:nk]' pivot='key' type='nominal' />
+      <column-instance column='[Calculation_1445936992522231809]' derivation='None' name='[none:Calculation_1445936992522231809:nk]' pivot='key' type='nominal' />
+      <column-instance column='[date]' derivation='Month-Trunc' name='[tmn:date:qk]' pivot='key' type='quantitative' />
+      <group hidden='true' name='[Exclusions (Legend,MONTH(date))]' name-style='unqualified' user:auto-column='exclude'>
+        <groupfilter function='crossjoin'>
+          <groupfilter function='level-members' level='[none:Calculation_1445936992522231809:nk]' />
+          <groupfilter function='level-members' level='[tmn:date:qk]' />
+        </groupfilter>
+      </group>
+      <layout dim-ordering='alphabetic' dim-percentage='0.52815' measure-ordering='alphabetic' measure-percentage='0.47185' show-aliased-fields='true' show-structure='true' />
+      <style>
+        <style-rule element='mark'>
+          <encoding attr='color' field='[none:Calculation_1445936992522231809:nk]' type='palette'>
+            <map to='#1f77b4'>
+              <bucket>&quot;BLUE&quot;</bucket>
+            </map>
+            <map to='#2ca02c'>
+              <bucket>&quot;RED&quot;</bucket>
+            </map>
+            <map to='#ff7f0e'>
+              <bucket>&quot;ORANGE&quot;</bucket>
+            </map>
+          </encoding>
+          <encoding attr='color' field='[attr:Calculation_1445936992522231809:nk]' type='palette'>
+            <map to='#1f77b4'>
+              <bucket>&quot;BLUE&quot;</bucket>
+            </map>
+            <map to='#2ca02c'>
+              <bucket>&quot;RED&quot;</bucket>
+            </map>
+            <map to='#d62728'>
+              <bucket>%many-values%</bucket>
+            </map>
+            <map to='#ff7f0e'>
+              <bucket>&quot;ORANGE&quot;</bucket>
+            </map>
+          </encoding>
+        </style-rule>
+      </style>
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;United States&quot;' />
+      </semantic-values>
+    </datasource>
   </datasources>
   <mapsources>
     <mapsource name='Tableau' />
   </mapsources>
+  <actions>
+    <action caption='Highlight 1 (generated)' name='[Action1]'>
+      <activation auto-clear='true' type='on-select' />
+      <source type='sheet' worksheet='Sheet 31' />
+      <command command='tsc:brush'>
+        <param name='field-captions' value='ATTR(Legend)' />
+        <param name='target' value='Sheet 31' />
+      </command>
+    </action>
+  </actions>
   <worksheets>
     <worksheet name='ARIMA'>
       <layout-options>
@@ -11929,6 +12090,101 @@
       </table>
       <simple-id uuid='{AC2C2041-C1CC-4ABE-8EE1-B31A088BB6E5}' />
     </worksheet>
+    <worksheet name='Sheet 31'>
+      <layout-options>
+        <title>
+          <formatted-text>
+            <run fontsize='18'>2008 Great Recession</run>
+          </formatted-text>
+        </title>
+      </layout-options>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='Past Events' name='federated.1myzhrn02netnr1dfp2h101982wo' />
+          </datasources>
+          <datasource-dependencies datasource='federated.1myzhrn02netnr1dfp2h101982wo'>
+            <column caption='Legend' datatype='string' name='[Calculation_1445936992522231809]' role='dimension' type='nominal'>
+              <calculation class='tableau' formula='IF [macroeconcode] = &apos;Stock Price&apos;&#13;&#10;THEN &quot;BLUE&quot;&#13;&#10;ELSE &quot;ORANGE&quot;&#13;&#10;END' />
+            </column>
+            <column-instance column='[Calculation_1445936992522231809]' derivation='Attribute' name='[attr:Calculation_1445936992522231809:nk]' pivot='key' type='nominal' />
+            <column-instance column='[close]' derivation='Avg' name='[avg:close:qk]' pivot='key' type='quantitative' />
+            <column datatype='real' name='[close]' role='measure' type='quantitative' />
+            <column datatype='date' datatype-customized='true' name='[date]' role='dimension' type='ordinal' />
+            <column datatype='string' name='[macroeconcode]' role='dimension' type='nominal'>
+              <aliases>
+                <alias key='&quot;ALL&quot;' value='MSF3' />
+              </aliases>
+            </column>
+            <column-instance column='[Calculation_1445936992522231809]' derivation='None' name='[none:Calculation_1445936992522231809:nk]' pivot='key' type='nominal' />
+            <column-instance column='[macroeconcode]' derivation='None' name='[none:macroeconcode:nk]' pivot='key' type='nominal' />
+            <column-instance column='[date]' derivation='Month-Trunc' name='[tmn:date:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.1myzhrn02netnr1dfp2h101982wo].[Exclusions (Legend,MONTH(date))]'>
+            <groupfilter function='except' user:ui-domain='database' user:ui-enumeration='exclusive' user:ui-marker='enumerate'>
+              <groupfilter function='crossjoin'>
+                <groupfilter function='level-members' level='[none:Calculation_1445936992522231809:nk]' />
+                <groupfilter function='level-members' level='[tmn:date:qk]' />
+              </groupfilter>
+              <groupfilter function='crossjoin'>
+                <groupfilter function='member' level='[none:Calculation_1445936992522231809:nk]' member='&quot;ORANGE&quot;' />
+                <groupfilter function='member' level='[tmn:date:qk]' member='#2007-12-01 00:00:00#' />
+              </groupfilter>
+            </groupfilter>
+          </filter>
+          <filter class='categorical' column='[federated.1myzhrn02netnr1dfp2h101982wo].[none:macroeconcode:nk]'>
+            <groupfilter function='level-members' level='[none:macroeconcode:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <slices>
+            <column>[federated.1myzhrn02netnr1dfp2h101982wo].[none:macroeconcode:nk]</column>
+            <column>[federated.1myzhrn02netnr1dfp2h101982wo].[Exclusions (Legend,MONTH(date))]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='axis'>
+            <encoding attr='space' class='0' field='[federated.1myzhrn02netnr1dfp2h101982wo].[avg:close:qk]' field-type='quantitative' max='170.0' min='30.0' range-type='fixed' scope='rows' type='space' />
+          </style-rule>
+          <style-rule element='label'>
+            <format attr='font-size' field='[federated.1myzhrn02netnr1dfp2h101982wo].[tmn:date:qk]' value='14' />
+            <format attr='font-size' field='[federated.1myzhrn02netnr1dfp2h101982wo].[avg:close:qk]' value='14' />
+          </style-rule>
+          <style-rule element='title'>
+            <format attr='background-color' value='#00000000' />
+          </style-rule>
+          <style-rule element='legend'>
+            <format attr='font-size' value='14' />
+          </style-rule>
+          <style-rule element='legend-title'>
+            <format attr='font-size' value='14' />
+          </style-rule>
+          <style-rule element='legend-title-text'>
+            <format attr='color' field='[federated.1myzhrn02netnr1dfp2h101982wo].[attr:Calculation_1445936992522231809:nk]' value='Legend' />
+          </style-rule>
+          <style-rule element='quick-filter'>
+            <format attr='title' field='[federated.1myzhrn02netnr1dfp2h101982wo].[none:macroeconcode:nk]' value='Filter' />
+            <format attr='font-size' value='14' />
+          </style-rule>
+          <style-rule element='quick-filter-title'>
+            <format attr='font-size' value='14' />
+          </style-rule>
+        </style>
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1myzhrn02netnr1dfp2h101982wo].[attr:Calculation_1445936992522231809:nk]' />
+            </encodings>
+          </pane>
+        </panes>
+        <rows>[federated.1myzhrn02netnr1dfp2h101982wo].[avg:close:qk]</rows>
+        <cols>[federated.1myzhrn02netnr1dfp2h101982wo].[tmn:date:qk]</cols>
+      </table>
+      <simple-id uuid='{1D553A00-AE24-4493-BAC9-FEFCC7DC8D5C}' />
+    </worksheet>
     <worksheet name='XGBoost'>
       <layout-options>
         <title>
@@ -12097,8 +12353,8 @@
         <devicelayout auto-generated='true' name='Phone'>
           <size maxheight='1700' minheight='1700' sizing-mode='vscroll' />
           <zones>
-            <zone h='100000' id='560' type='layout-basic' w='100000' x='0' y='0'>
-              <zone h='84000' id='559' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
+            <zone h='100000' id='564' type='layout-basic' w='100000' x='0' y='0'>
+              <zone h='84000' id='563' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
                 <zone h='36125' id='10' mode='dropdown' name='BuySellCMA' param='[federated.0d0bitb1hwec5115u9ii61rbb5l8].[none:instrumentname:nk]' type='filter' w='8500' x='200' y='250'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -12366,8 +12622,8 @@
         <devicelayout auto-generated='true' name='Phone'>
           <size maxheight='1200' minheight='1200' sizing-mode='vscroll' />
           <zones>
-            <zone h='100000' id='365' type='layout-basic' w='100000' x='0' y='0'>
-              <zone h='84000' id='364' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
+            <zone h='100000' id='369' type='layout-basic' w='100000' x='0' y='0'>
+              <zone h='84000' id='368' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
                 <zone h='24125' id='68' mode='dropdown' name='BuySellEMA' param='[federated.06megdz1a02j3z1dkwkm414o6r2f].[none:instrumentname:nk]' type='filter' w='16000' x='83600' y='375'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -12552,8 +12808,8 @@
         <devicelayout auto-generated='true' name='Phone'>
           <size maxheight='1200' minheight='1200' sizing-mode='vscroll' />
           <zones>
-            <zone h='100000' id='675' type='layout-basic' w='100000' x='0' y='0'>
-              <zone h='84000' id='674' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
+            <zone h='100000' id='679' type='layout-basic' w='100000' x='0' y='0'>
+              <zone h='84000' id='678' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
                 <zone h='23875' id='265' mode='dropdown' name='ARIMA' param='[federated.0nzmwfa0imfakq1avnw3m0x6mpwr].[none:instrumentname:nk]' type='filter' w='14100' x='85500' y='625'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -12675,8 +12931,8 @@
         <devicelayout auto-generated='true' name='Phone'>
           <size maxheight='800' minheight='800' sizing-mode='vscroll' />
           <zones>
-            <zone h='100000' id='352' type='layout-basic' w='100000' x='0' y='0'>
-              <zone h='84000' id='351' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
+            <zone h='100000' id='356' type='layout-basic' w='100000' x='0' y='0'>
+              <zone h='84000' id='355' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
                 <zone h='24625' id='12' mode='dropdown' name='PrevGrpImprvd' param='[federated.1az0uwd0jgb9z512ht85110bea16].[none:instrumentname:nk]' type='filter' w='14600' x='85000' y='375'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -12745,7 +13001,7 @@
       <simple-id uuid='{4D9FA0C3-CCC4-4C12-9377-0D42817F4E17}' />
     </dashboard>
   </dashboards>
-  <windows film-mode='true' source-height='191'>
+  <windows film-mode='true' show-side-pane='false' source-height='744'>
     <window class='dashboard' name='Portfolio-CMA_FRL-EMA' tab-color='#f66273'>
       <viewpoints>
         <viewpoint name='PortfolioCMA'>
@@ -14174,10 +14430,11 @@
       </viewpoint>
       <simple-id uuid='{C2EBA456-0532-43AD-BD31-257353AE89E5}' />
     </window>
-    <window class='worksheet' maximized='true' name='Macroecon Forecast'>
+    <window class='worksheet' name='Macroecon Forecast'>
       <cards>
         <edge name='right'>
           <strip size='300'>
+            <card param='[federated.0d773c80zw2g4p12486nn0n9nebh].[attr:Calculation_2236037240445517840:nk]' show-morefewerbutton='false' type='filter' />
             <card param='[federated.0d773c80zw2g4p12486nn0n9nebh].[none:algorithmcode:nk]' type='filter' />
             <card mode='radiolist' param='[federated.0d773c80zw2g4p12486nn0n9nebh].[none:instrumentname:nk]' type='filter' />
             <card pane-specification-id='4' param='[federated.0d773c80zw2g4p12486nn0n9nebh].[attr:Calculation_2236037240445517840:nk]' type='color' />
@@ -14240,7 +14497,7 @@
           <floating-toolbar-visibility value='2' />
         </viewpoint>
       </viewpoints>
-      <active id='10' />
+      <active id='-1' />
       <simple-id uuid='{898C4BD8-676D-464F-A539-9CE2A585AB77}' />
     </window>
     <window class='worksheet' name='Regression'>
@@ -14281,6 +14538,45 @@
         <floating-toolbar-visibility value='2' />
       </viewpoint>
       <simple-id uuid='{1F09BC11-A415-4ABE-B171-8526EF790841}' />
+    </window>
+    <window class='worksheet' maximized='true' name='Sheet 31'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='31'>
+            <card type='title' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card param='[federated.1myzhrn02netnr1dfp2h101982wo].[none:macroeconcode:nk]' type='filter' />
+            <card pane-specification-id='0' param='[federated.1myzhrn02netnr1dfp2h101982wo].[attr:Calculation_1445936992522231809:nk]' type='color' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <highlight>
+          <color-one-way>
+            <field>[federated.0d773c80zw2g4p12486nn0n9nebh].[tmn:date:qk]</field>
+            <field>[federated.1myzhrn02netnr1dfp2h101982wo].[none:Legend (copy)_1445936992522571778:nk]</field>
+            <field>[federated.1myzhrn02netnr1dfp2h101982wo].[none:date:nk]</field>
+            <field>[federated.1myzhrn02netnr1dfp2h101982wo].[none:macroeconcode:nk]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{0EE262AD-31AE-432F-935F-E317A22987E2}' />
     </window>
   </windows>
   <thumbnails>
@@ -18900,86 +19196,88 @@
     </thumbnail>
     <thumbnail height='192' name='Macovariables' width='192'>
       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
-      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
+      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
     </thumbnail>
     <thumbnail height='192' name='Macroecon Forecast' width='192'>
       iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAACXBIWXMAAA7DAAAOwwHHb6hk
@@ -23512,6 +23810,90 @@
       4vkudUcmLfscmJ3j0b2v2HJVRKvOsVdOosX8yta2ajimgYDPZt2hqMsUZ2ZZ/eo6tpxHtLeZ
       f+kEqZgjCsCd5T+i5A8hmRUcJcuzjQ2+c/rPWLpxg5e/dQolQZTe0/UHPK5Z38wBvsH/b/wP
       1lgZlWHD9GYAAAAASUVORK5CYII=
+    </thumbnail>
+    <thumbnail height='192' name='Sheet 31' width='192'>
+      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
+      Awk/y8/4aj3RAAAAAElFTkSuQmCC
     </thumbnail>
     <thumbnail height='192' name='XGBoost' width='192'>
       iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAACXBIWXMAAA7DAAAOwwHHb6hk
