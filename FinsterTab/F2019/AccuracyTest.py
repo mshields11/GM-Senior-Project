@@ -94,12 +94,16 @@ def MSF1_accuracy(self):
     # train_date represents the date we start collecting the instrument statistics used to forecast prices
     train_date = "'2016-01-01'"
 
-
+    # Bool to determine whether we append to dbo_tempvisualize or replace the values
+    to_append = False
 
     # Create a for loop to iterate through all of the instrument ids
     for v in id2['instrumentid']:
         # Initializes a list for which we will eventually be storing all data to add to the macroeconalgorithm database table
         data = []
+        # Data1 will be used to store the forecastdate, instrumentid, forecastprice, and algorithm code
+        # It will be used to graph our backtested forecast against the actual instrument prices
+        data1 = []
 
         # Getting Dates for Future Forecast as well as actual close prices for instrumentID#
         # We chose 2018 - 2020, to alter this date range simply change the dates in the 3rd line of the query for the dates you want to test on
@@ -199,10 +203,17 @@ def MSF1_accuracy(self):
         # Set up a for loop to construct a list using variables associated with macroeconalgorithm database table
         for i in range(len(forecast_prices)):
             data.append([date[i], v, 'ALL', forecast_prices[i], close[i], 'MSF1', 0])
+            data1.append([date[i], v, forecast_prices[i], 'MSF1'])
 
         # Convert data list to dataframe variable
         df = pd.DataFrame(data, columns=['forecastdate', 'instrumentid', 'macroeconcode',
                                         'forecastcloseprice', 'close', 'algorithmcode', 'prederror'])
+
+
+        df1 = pd.DataFrame(data1, columns=['forecastdate', 'instrumentid', 'forecastcloseprice', 'algorithmcode'])
+        df1.to_sql('dbo_tempvisualize', self.engine, if_exists=('replace' if not to_append else 'append'), index=False)
+        to_append = True
+
 
         # Populates absolute_percent_error with the calculated percent error for a specific data point
         absolute_percent_error = []
@@ -228,9 +239,9 @@ def MSF1_accuracy(self):
 
         length = len(df)
         trend_error = (count / length) * 100
-        print("Trend accuracy for %s for instrument %d is %.2f%%" % ('MSF1', v, trend_error))
+        #print("Trend accuracy for %s for instrument %d is %.2f%%" % ('MSF1', v, trend_error))
         print("The average percent error for %s for instrument %d is %.2f%%" % ('MSF1', v, average_percent_error * 100))
-        print()
+
         # return the average percent error calculated above
 
 
@@ -410,8 +421,6 @@ def MSF2_accuracy(self):
 #Create weightings MSF2 runs the MSF2 algorithm for past dates and compares them to actual instrument prices, generating a percent error calculation
 #We then iterate through several different weightings and we compare each percent error for each instrument and determine the weightings with the lowest percent error
 def create_weightings_MSF2(self):
-    # Count variable to determine whether to replace or append the visualize and compare database
-    cnt = 0
 
     # Query to grab the macroeconcodes and macroeconnames from the macroeconmaster database table
     query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
@@ -551,10 +560,8 @@ def create_weightings_MSF2(self):
             visual_comparisons.append([dates[k], ikeys[x], best_forecast_prices[k], 'MSF2'])
         df1 = pd.DataFrame(visual_comparisons, columns=['forecastdate', 'instrumentid', 'forecastcloseprice', 'algorithmcode'])
         df1.to_sql('dbo_tempvisualize', self.engine,
-                    if_exists=('replace' if cnt == 0 else 'append'), index=False)
+                    if_exists=('append'), index=False)
 
-        #Incrament count so that the next iterations do not replace the database
-        cnt += 1
     # The weightings for each instrument ID are returned to dataforecast and used for prediction
     return weightings
 
