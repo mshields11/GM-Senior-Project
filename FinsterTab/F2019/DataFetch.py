@@ -40,12 +40,10 @@ class DataFetch:
         Store data in MySQL database
         :param sources: provides ticker symbols of instruments being tracked
         """
-        now = dt.date(2008,1,1) # Date Variables
+        now = dt.date(2010,1,1) # Date Variables
 
-        start = now-timedelta(days=1000)  # get date value from 3 years ago
+        start = now-timedelta(days=2000)  # get date value from 3 years ago
         end = now
-        print(sources)
-        print(now, start, end)
 
         # Cycle through each ticker symbol
         for n in range(len(sources)):
