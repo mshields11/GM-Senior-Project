@@ -180,9 +180,7 @@ def MSF1_accuracy(self):
             temp_price = 0
             # Setup a for loop to calculate the final forecast price and add data to the list variable data
             for i in range(n):
-
                 if isFirst:
-                    print(i, " ", S)
                     if x in [2, 3, 4]:
                         temp_price = ((S * (SP['close'].iloc[n-1])) + (SP['close'].iloc[n-1]))
                         isFirst = False
@@ -522,9 +520,9 @@ def create_weightings_MSF2(self):
         best_forecast_prices = []
 
         # We now iterate through all 3 different possible weightings
-        for weight in numpy.arange(0, 2, .1):
-            for uweight in numpy.arange(0, 1, .1):
-                for iweight in numpy.arange(0, 1, .1):
+        for weight in numpy.arange(-1, 2.7, .2):
+            for uweight in numpy.arange(-1, 1, .2):
+                for iweight in numpy.arange(-1, 1, .2):
 
                     # We intialize a list to store the resulting forecasted prices to compare in another function
                     stat_check = []
@@ -571,7 +569,7 @@ def create_weightings_MSF2(self):
         # Print statements to view the average percent error, trend error, and best weightings
         print("The lowest avg percent error is %.7f%% for instrumentID %d" % (best_avg_error, ikeys[x]), ' for function: MSF2')
         print("The weightings are: ", best_weightings, ' for function: MSF2')
-        print('The trend error is: ', best_trend_error)
+        #print('The trend error is: ', best_trend_error)
 
         # initializes weightings dictionary as the best weightings found for each instrument id
         weightings[ikeys[x]] = best_weightings
@@ -682,9 +680,9 @@ def create_weightings_MSF3(self):
         best_forecast_prices = []
 
         #We now iterate through all 3 different possible weightings
-        for weight in numpy.arange(0, 2, .1):
-            for uweight in numpy.arange(0, 1, .1):
-                for iweight in numpy.arange(0, 1, .1):
+        for weight in numpy.arange(-1, 2.7, .2):
+            for uweight in numpy.arange(-1, 1, .2):
+                for iweight in numpy.arange(-1, 1, .2):
 
                     #We intialize a list to store the resulting forecasted prices to compare in another function
                     stat_check = []
@@ -728,7 +726,7 @@ def create_weightings_MSF3(self):
         #Print statements to view the average percent error, trend error, and best weightings
         print("The lowest avg percent error is %.7f%% for instrumentID %d" % (best_avg_error, ikeys[x]), ' for function: MSF3')
         print("The weightings are: ", best_weightings, ' for function: MSF3')
-        print('The trend error is: ',  best_trend_error)
+        #print('The trend error is: ',  best_trend_error)
 
         #initializes weightings dictionary as the best weightings found for each instrument id
         weightings[ikeys[x]] = best_weightings
