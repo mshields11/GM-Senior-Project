@@ -862,6 +862,7 @@ class DataForecast:
                 SP = SP.reset_index(drop=True)
                 macroPercentChange = macroPercentChange.reset_index(drop=True)
 
+
                 for i in range(0, n):
 
                     if (i == 0):
@@ -873,17 +874,28 @@ class DataForecast:
 
 
                 #Algorithm for forecast price
-                G, S = DataForecast.calc(self, macroPercentChange, SP, n)                                               #Calculates the average GDP and S&P values for the given data points over n days and performs operations on GDP average
+                S = DataForecast.calc(self, macroPercentChange, SP, n) #Calculates the average GDP and S&P values for the given data points over n days and performs operations on GDP average
 
+                temp_price = 0
+                isFirst = True
 
                 # Setup a for loop to calculate the final forecast price and add data to the list variable data
                 for i in range(n):
-                    if x in [2, 3, 4]:
-                        S = (S*((-G) + 1))
+                    if isFirst:
+                        if x in [2, 3, 4]:
+                            temp_price = ((S*SP['close'].iloc[n-1]) + SP['close'].iloc[n-1])
+                            isFirst = False
+                        else:
+                            temp_price = ((S*SP['close'].iloc[n-1]) + SP['close'].iloc[n-1])
+                            isFirst = False
                     else:
-                        S = (S*((G)+1))
+                        if x in [2, 3, 4]:
+                            temp_price = ((S*temp_price) + temp_price)
+                        else:
+                            temp_price = ((S*temp_price)+ temp_price)
+
                     #Once the forecast price is calculated append it to median_forecast list
-                    median_forecast[date[i]].append(S)
+                    median_forecast[date[i]].append(temp_price)
 
             #Calculates the median value for each date using a list of prices forecasted by each individual macro economic variable
             forecast_prices = []
@@ -1049,11 +1061,23 @@ class DataForecast:
             # Temp result will then store the resulting forecast prices throughout the calculation of n datapoints
             temp_result = []
 
+            isFirst = True
             # This for loop is where the actual calculation takes place
             for i in range(n):
-                stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['Unemployment Rate'][i] * weightings[ikeys[x]][1] + vars['Inflation Rate'][i] * weightings[ikeys[x]][2]) - (vars['Misery Index'][i] * vars['Misery Index'][i])
-                stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
-                temp_result.append(stat)
+                if isFirst:
+                    stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['Unemployment Rate'][i] * weightings[ikeys[x]][1] + vars['Inflation Rate'][i] * weightings[ikeys[x]][2]) - (vars['Misery Index'][i] * vars['Misery Index'][i])
+                    stat = (stat * instrumentStats['close'].iloc[n-1]) + instrumentStats['close'].iloc[n-1]
+                    temp_result.append(stat)
+                    temp_price = stat
+                    isFirst = False
+                else:
+                    stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['Unemployment Rate'][i] * weightings[ikeys[x]][1] + vars['Inflation Rate'][i] *
+                                weightings[ikeys[x]][2]) - (vars['Misery Index'][i] * vars['Misery Index'][i])
+                    stat = (stat * temp_price) + temp_price
+                    temp_result.append(stat)
+                    temp_price = stat
+
+
 
             # We then append the resulting forcasted prices over n quarters to result, a dictionary where each
             # Instrument ID is mapped to n forecast prices
@@ -1097,7 +1121,7 @@ class DataForecast:
         # Vars is a dictionary used to store the macro economic variable percent change for each macro economic code
         vars = {}
         for i in data['macroeconcode']:
-            # Vars is only populated with the relevant macro economic variables (GDP, UR, IR, and MI)
+            # Vars is only populated with the relevant macro economic variables (GDP, COVI, CPIUC, and FSI)
             if(i == 'GDP' or i == 'COVI' or i == 'CPIUC' or i == 'FSI'):
                 d = {i: []}
                 vars.update(d)
@@ -1211,12 +1235,23 @@ class DataForecast:
             # Temp result will then store the resulting forecast prices throughout the calculation of n datapoints
             temp_result = []
 
+            isFirst = True
             # This for loop is where the actual calculation takes place
             for i in range(n):
-                stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['COVI'][i] * weightings[ikeys[x]][1] + vars['FSI'][i] * weightings[ikeys[x]][2]) - \
-                       (vars['CPIUC'][i] * vars['CPIUC'][i])
-                stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
-                temp_result.append(stat)
+                if isFirst:
+                    stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['COVI'][i] * weightings[ikeys[x]][1] + vars['FSI'][i] * weightings[ikeys[x]][2]) - \
+                           (vars['CPIUC'][i] * vars['CPIUC'][i])
+                    stat = (stat * instrumentStats['close'].iloc[n-1]) + instrumentStats['close'].iloc[n-1]
+                    temp_result.append(stat)
+                    temp_price = stat
+                    isFirst = False
+                else:
+                    stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['COVI'][i] * weightings[ikeys[x]][1] + vars['FSI'][i] * weightings[ikeys[x]][2]) - \
+                           (vars['CPIUC'][i] * vars['CPIUC'][i])
+                    stat = (stat * temp_price) + temp_price
+                    temp_result.append(stat)
+                    temp_price = stat
+
 
             # We then append the resulting forcasted prices over n quarters to result, a dictionary where each
             # Instrument ID is mapped to n forecast prices
@@ -1240,16 +1275,16 @@ class DataForecast:
     # Calculation function used in MSF1
     def calc(self, df1, df2, n):
         G = 0
-        S = 0
+        #S = 0
         # Calculates average Macro Variable % change and S&P closing prices over past n days
         for i in range(n):
             G = df1['statistics'][i] + G
-            S = df2['close'][i] + S
+            #S = df2['close'][i] + S
 
         G = G / n
-        S = S / n
+        #S = S / n
         G = G / 100
-        return (G*2),S
+        return G
 
 
 

@@ -174,18 +174,28 @@ def MSF1_accuracy(self):
                     macroPercentChange['statistics'].iloc[i] = macrov * 100
 
             # Algorithm for forecast price
-            G, S = calc(self, macroPercentChange, SP,n)  # Calculates the average GDP and S&P values for the given data points over n days and performs operations on GDP average
+            S = calc(self, macroPercentChange, SP,n)  # Calculates the average GDP and S&P values for the given data points over n days and performs operations on GDP average
 
-
-
+            isFirst = True
+            temp_price = 0
             # Setup a for loop to calculate the final forecast price and add data to the list variable data
             for i in range(n):
-                if x in [2, 3, 4]:
-                    S = (S * ((-G) + 1))
+
+                if isFirst:
+                    print(i, " ", S)
+                    if x in [2, 3, 4]:
+                        temp_price = ((S * (SP['close'].iloc[n-1])) + (SP['close'].iloc[n-1]))
+                        isFirst = False
+                    else:
+                        temp_price = ((S * SP['close'].iloc[n-1]) + SP['close'].iloc[n-1])
+                        isFirst = False
                 else:
-                    S = (S * ((G) + 1))
+                    if x in [2, 3, 4]:
+                        temp_price = ((S * temp_price) + temp_price)
+                    else:
+                        temp_price = ((S * temp_price) + temp_price)
                 # Once the forecast price is calculated append it to median_forecast list
-                median_forecast[date[i]].append(S)
+                median_forecast[date[i]].append(temp_price)
 
         # Calculates the median value for each date using a list of prices forecasted by each individual macro economic variable
         forecast_prices = []
@@ -325,7 +335,7 @@ def MSF2_accuracy(self):
         for k in range(n):
             stat = indicators['GDP'][k] * 1 - (indicators['UR'][k] * 0 + indicators['IR'][k] * .5) - (
                         indicators['MI'][k] * indicators['MI'][k])
-            stat = (stat * train_data['close'].iloc[k]) + train_data['close'].iloc[k]
+            stat = (stat * train_data['close'].iloc[n-1]) + train_data['close'].iloc[n-1]
             calculated_forecast.append(stat)
 
 
@@ -519,12 +529,24 @@ def create_weightings_MSF2(self):
                     # We intialize a list to store the resulting forecasted prices to compare in another function
                     stat_check = []
 
+                    cnt = 0
+
                     # This is the actual calculation of MSF3 where we store the result in stat_check to compare to actual instrument prices
                     for i in range(n):
-                        stat = vars['GDP'][i] * weight - (vars['UR'][i] * uweight + vars['IR'][i] * iweight) - (
+                        if cnt == 0:
+                            stat = vars['GDP'][i] * weight - (vars['UR'][i] * uweight + vars['IR'][i] * iweight) - (
+                                        vars['MI'][i] * vars['MI'][i])
+                            stat = (stat * instrumentStats['close'].iloc[n-1]) + instrumentStats['close'].iloc[n-1]
+                            stat_check.append(stat)
+                            temp_price = stat
+                            cnt += 1
+                        else:
+                            stat = vars['GDP'][i] * weight - (vars['UR'][i] * uweight + vars['IR'][i] * iweight) - (
                                     vars['MI'][i] * vars['MI'][i])
-                        stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
-                        stat_check.append(stat)
+                            stat = (stat * temp_price) + temp_price
+                            stat_check.append(stat)
+                            temp_price = stat
+
 
                     # We call to the weight check function using the list of forecasted prices, the current instrument id, the amount of datapoints we are working with, and the name of the function we are testing
                     # It then returns the average percent error and trend error for the forecasted prices, as well as the dates we are forecasting for so we can insert them into the visualize table
@@ -666,13 +688,22 @@ def create_weightings_MSF3(self):
 
                     #We intialize a list to store the resulting forecasted prices to compare in another function
                     stat_check = []
-
+                    cnt = 0
                     #This is the actual calculation of MSF3 where we store the result in stat_check to compare to actual instrument prices
                     for i in range(n):
-                        stat = vars['GDP'][i] * weight - (vars['COVI'][i] * uweight + vars['FSI'][i] * iweight) - (
+                        if cnt == 0:
+                            stat = vars['GDP'][i] * weight - (vars['COVI'][i] * uweight + vars['FSI'][i] * iweight) - (
                                     vars['CPIUC'][i] * vars['CPIUC'][i])
-                        stat = (stat * instrumentStats['close'].iloc[i]) + instrumentStats['close'].iloc[i]
-                        stat_check.append(stat)
+                            stat = (stat * instrumentStats['close'].iloc[n - 1]) + instrumentStats['close'].iloc[n - 1]
+                            stat_check.append(stat)
+                            temp_price = stat
+                            cnt += 1
+                        else:
+                            stat = vars['GDP'][i] * weight - (vars['COVI'][i] * uweight + vars['FSI'][i] * iweight) - (
+                                        vars['CPIUC'][i] * vars['CPIUC'][i])
+                            stat = (stat * temp_price) + temp_price
+                            stat_check.append(stat)
+                            temp_price = stat
 
                     #We call to the weight check function using the list of forecasted prices, the current instrument id, the amount of datapoints we are working with, and the name of the function we are testing
                     #It then returns the average percent error and trend error for the forecasted prices, as well as the dates we are forecasting for so we can insert them into the visualize table
@@ -767,16 +798,16 @@ def weight_check(self, calculated_forecast, instrumentid, n, function_name, star
 # Calc function used for calculation in MSF1
 def calc(self, df1, df2, n):
     G = 0
-    S = 0
+    #S = 0
     # Calculates average Macro Variable % change and S&P closing prices over past n days
     for i in range(n):
         G = df1['statistics'][i] + G
-        S = df2['close'][i] + S
+        #S = df2['close'][i] + S
 
     G = G / n
-    S = S / n
+    #S = S / n
     G = G / 100
-    return (G * 2), S
+    return  G
 
 db_engine = DBEngine().mysql_engine()
 #arima_accuracy(db_engine)
