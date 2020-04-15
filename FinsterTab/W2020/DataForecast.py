@@ -8,7 +8,7 @@ from statistics import stdev
 import numpy as np
 import xgboost as xgb
 import calendar
-import datetime
+import datetime as dt
 from datetime import timedelta, datetime
 import FinsterTab.F2019.AccuracyTest
 import sqlalchemy as sal
@@ -749,7 +749,111 @@ class DataForecast:
                 insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                 self.engine.execute(insert_query)
 
+    def calculate_regression(self):
+        """
+            Calculate polynomial regression of the next 10 days
+            Algorithm's accuracy is... questionable
+        """
+        # retrieve InstrumentsMaster table from database
+        query = 'SELECT * FROM {}'.format(self.table_name)
+        df = pd.read_sql_query(query, self.engine)
+        algoCode = "'regression'"
 
+        # add code to database if it doesn't exist
+        code_query = 'SELECT COUNT(*) FROM dbo_algorithmmaster WHERE algorithmcode=%s' % algoCode
+        count = pd.read_sql_query(code_query, self.engine)
+        if count.iat[0, 0] == 0:
+            algoName = "'PolynomialRegression'"
+            insert_code_query = 'INSERT INTO dbo_algorithmmaster VALUES({},{})'.format(algoCode, algoName)
+            self.engine.execute(insert_code_query)
+
+        # loop through each ticker symbol
+        for ID in df['instrumentid']:
+
+            # remove all future prediction dates
+            remove_future_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND prederror=0 AND ' \
+                                  'instrumentid={}'.format(algoCode, ID)
+            self.engine.execute(remove_future_query)
+
+            # find the latest forecast date
+            date_query = 'SELECT forecastdate FROM dbo_algorithmforecast WHERE algorithmcode={} AND instrumentid={} ' \
+                         'ORDER BY forecastdate DESC LIMIT 1'.format(algoCode, ID)
+            latest_date = pd.read_sql_query(date_query, self.engine)  # most recent forecast date calculation
+
+            # if table has forecast prices already find the latest one and delete it
+            # need to use most recent data for today if before market close at 4pm
+            if not latest_date.empty:
+                latest_date_str = "'" + str(latest_date['forecastdate'][0]) + "'"
+                delete_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND instrumentid={} AND ' \
+                               'forecastdate={}'.format(algoCode, ID, latest_date_str)
+                self.engine.execute(delete_query)
+
+            # get raw price data from database
+            data_query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid=%s ORDER BY Date ASC' % ID
+            data = pd.read_sql_query(data_query, self.engine)
+
+            # regression model from previous days
+            input_length = 20
+
+            # predict ahead
+            forecast_length = 5
+
+            for n in range(input_length, len(data)):
+
+                recent_data = data[n - input_length:n]
+
+                # get most recent trading day
+                forecastDate = "'" + str(data['date'][n]) + "'"
+
+                # x and y axis
+                x_axis = np.array(recent_data['date'])
+                y_axis = np.array(recent_data['close'])
+
+                # convert date to a ordinal value to allow for regression
+                df = pd.DataFrame({'date': x_axis, 'close': y_axis})
+                df['date'] = pd.to_datetime(df['date'])
+                df['date'] = df['date'].map(dt.datetime.toordinal)
+
+                X = np.array(df['date'])
+                X = np.array(X)
+                X = X.reshape(-1, 1)
+                y = np.array(df['close'])
+
+                poly_reg = PolynomialFeatures(degree=4)
+                X_poly = poly_reg.fit_transform(X)
+                pol_reg = LinearRegression()
+                pol_reg.fit(X_poly, y)
+                # plt.scatter(X, y, color='red')
+                # plt.plot(X, pol_reg.predict(poly_reg.fit_transform(X)), color='blue')
+                # plt.title('Prediction')
+                # plt.xlabel('Date')
+                # plt.ylabel('Percentage Change')
+                # plt.show()
+
+                forecast_dates_query = 'SELECT date from dbo_datedim WHERE date > {} AND weekend=0 AND isholiday=0 ' \
+                                       'ORDER BY date ASC LIMIT {}'.format(forecastDate, forecast_length)
+
+                future_dates = pd.read_sql_query(forecast_dates_query, self.engine)
+                # delete outdated forecasts for the next period
+                delete_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND instrumentid={} AND ' \
+                               'forecastdate>{}'.format(algoCode, ID, forecastDate)
+                self.engine.execute(delete_query)
+
+                for n in range(len(future_dates)):
+                    insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ({}, {}, {}, {}, {})'
+
+                    forecastDate = future_dates['date'][n]
+
+                    ordinalDate = forecastDate.toordinal()
+                    forecastDate = "'" + str(future_dates['date'][n]) + "'"
+
+                    forecastClose = pol_reg.predict(poly_reg.fit_transform([[ordinalDate]]))
+                    forecastClose = (round(forecastClose[0], 3))
+                    # populate entire table if empty
+                    # or add new dates based on information in Statistics table
+                    insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, 0)
+
+                    self.engine.execute(insert_query)
     def MSF1(self):
         #Queires the database to grab all of the Macro Economic Variable codes
         query = "SELECT macroeconcode FROM dbo_macroeconmaster WHERE activecode = 'A'"
@@ -876,7 +980,12 @@ class DataForecast:
                 #Algorithm for forecast price
                 S = DataForecast.calc(self, macroPercentChange, SP, n) #Calculates the average GDP and S&P values for the given data points over n days and performs operations on GDP average
 
+                # temp_price will be used to hold the previous forecast price for the next prediction
                 temp_price = 0
+
+                # isFirst will determine whether or not this is the first calculation being done
+                # If it is true then we use the most recent instrument statistic to forecast the first pricepoint
+                # IF it is false then we use the previous forecast price to predict the next forecast price
                 isFirst = True
 
                 # Setup a for loop to calculate the final forecast price and add data to the list variable data
@@ -922,11 +1031,12 @@ class DataForecast:
         table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('replace'),
                      index=False)
 
-
-
-
-
     def MSF2(self):
+        # If you want to use set weightings, set this true. Otherwise set it false
+        # If you set it to true then the weightings can be altered for MSF2 in AccuracyTest.py on line 647 in create_weightings_MSF2
+        # Using set weightings will significantly speed up the run time of the application
+        setWeightings = True
+
         # Query to grab the macroeconcodes and macroeconnames from the macroeconmaster database table
         query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
         data = pd.read_sql_query(query, self.engine)
@@ -962,7 +1072,7 @@ class DataForecast:
 
         # Weightings are determined through a function written in accuracytest.py
         # The weightings returned are used in the calculation below
-        weightings = FinsterTab.F2019.AccuracyTest.create_weightings_MSF2(self.engine)
+        weightings = FinsterTab.F2019.AccuracyTest.create_weightings_MSF2(self.engine, setWeightings)
 
         n = 8
 
@@ -1061,6 +1171,9 @@ class DataForecast:
             # Temp result will then store the resulting forecast prices throughout the calculation of n datapoints
             temp_result = []
 
+            # isFirst will determine whether or not this is the first calculation being done
+            # If it is true then we use the most recent instrument statistic to forecast the first pricepoint
+            # IF it is false then we use the previous forecast price to predict the next forecast price
             isFirst = True
             # This for loop is where the actual calculation takes place
             for i in range(n):
@@ -1100,6 +1213,12 @@ class DataForecast:
 
 
     def MSF3(self):
+        # If you want to use set weightings, set this true. Otherwise set it false
+        # If you set it to true then the weightings can be altered for MSF3 in AccuracyTest.py on line 1064 in create_weightings_MSF3
+        # Using set weightings will significantly speed up the run time of the application
+        setWeightings = True
+
+
         # Query to grab the macroeconcodes and macroeconnames from the macroeconmaster database table
         query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
         data = pd.read_sql_query(query, self.engine)
@@ -1134,7 +1253,8 @@ class DataForecast:
 
         # Weightings are determined through a function written in accuracytest.py
         # The weightings returned are used in the calculation below
-        weightings = FinsterTab.F2019.AccuracyTest.create_weightings_MSF3(self.engine)
+        weightings = FinsterTab.F2019.AccuracyTest.create_weightings_MSF3(self.engine, setWeightings)
+
 
         n = 8
 
@@ -1235,6 +1355,9 @@ class DataForecast:
             # Temp result will then store the resulting forecast prices throughout the calculation of n datapoints
             temp_result = []
 
+            # isFirst will determine whether or not this is the first calculation being done
+            # If it is true then we use the most recent instrument statistic to forecast the first pricepoint
+            # IF it is false then we use the previous forecast price to predict the next forecast price
             isFirst = True
             # This for loop is where the actual calculation takes place
             for i in range(n):
@@ -1272,17 +1395,193 @@ class DataForecast:
                                             'forecastprice', 'algorithmcode', 'prederror'])
         table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('append'), index=False)
 
+    def MSF2_Past_Date(self):
+
+        # Query to grab the macroeconcodes and macroeconnames from the macroeconmaster database table
+        query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
+        data = pd.read_sql_query(query, self.engine)
+
+        # Query to grab the instrumentid and instrument name from the instrumentmaster database table
+        query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster WHERE instrumentid = 3'
+        data1 = pd.read_sql_query(query, self.engine)
+
+        # Keys is a dictionary that will be used to store the macro econ code for each macro econ name
+        keys = {}
+        for i in range(len(data)):
+            keys.update({data['macroeconname'].iloc[i]: data['macroeconcode'].iloc[i]})
+
+        # ikeys is a dictionary that will be used to store instrument ids for each instrument name
+        ikeys = {}
+        for x in range(len(data1)):
+            ikeys.update({data1['instrumentname'].iloc[x]: data1['instrumentid'].iloc[x]})
+
+        # Vars is a dictionary used to store the macro economic variable percent change for each macro economic code
+        vars = {}
+        for i in data['macroeconname']:
+            # Vars is only populated with the relevant macro economic variables (GDP, UR, IR, and MI)
+            if(i == 'GDP' or i == 'Unemployment Rate' or i == 'Inflation Rate' or i == 'Misery Index'):
+                d = {i: []}
+                vars.update(d)
+
+        # Result will hold the resulting forecast prices for each instrument ID
+        result = {}
+        for i in data1['instrumentid']:
+            d = {i: []}
+            result.update(d)
+
+
+        # Weightings are determined through a function written in accuracytest.py
+        # The weightings returned are used in the calculation below
+        weightings = FinsterTab.F2019.AccuracyTest.create_weightings_MSF2_Past_Dates(self.engine)
+
+        n = 8
+
+        # Getting Dates for Future Forecast #
+        # --------------------------------------------------------------------------------------------------------------#
+        # Initialize the currentDate variable for use when grabbing the forecasted dates
+        currentDate = datetime.today()
+
+        # Creates a list to store future forecast dates
+        date = []
+
+        # This will set the value of count according to which month we are in, this is to avoid having past forecast dates in the list
+        if (currentDate.month < 4):
+            count = 0
+        elif (currentDate.month < 7 and currentDate.month >= 4):
+            count = 1
+        elif (currentDate.month < 10 and currentDate.month >= 7):
+            count = 2
+        else:
+            count = 3
+
+        # Initialize a variable to the current year
+        year = currentDate.year
+
+        # Setup a for loop to loop through and append the date list with the date of the start of the next quarter
+        # For loop will run n times, corresponding to amount of data points we are working with
+        for i in range(n):
+            # If the count is 0 then we are still in the first quarter
+            if (count == 0):
+                # Append the date list with corresponding quarter and year
+                date.append(str(year) + "-03-" + "31")
+                # Increase count so this date is not repeated for this year
+                count += 1
+
+            # Do the same for the next quarter
+            elif (count == 1):
+                date.append(str(year) + "-06-" + "30")
+                count += 1
+
+            # And for the next quarter
+            elif (count == 2):
+                date.append(str(year) + "-09-" + "30")
+                count += 1
+
+            # Until we account for the last quarter of the year
+            else:
+                date.append(str(year) + "-12-" + "31")
+                # Where we then reinitialize count to 0
+                count = 0
+                # And then incrament the year for the next iterations
+                year = year + 1
+        # --------------------------------------------------------------------------------------------------------------#
+
+        # reinitializes currentDate to todays date, also typecasts it to a string so it can be read by MySQL
+        currentDate = str(datetime.today())
+        currentDate = ("'" + currentDate + "'")
+
+        # For loop to loop through the macroeconomic codes to calculate the macro economic variable percent change
+        for i in keys:
+            # Check to make sure the macroeconcode we are working with is one of the relevant ones
+            if i in vars:
+                # Query to grab the macroeconomic statistics from the database using the relevant macro economic codes
+                query = 'SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format('"' + keys[i] + '"')
+                data = pd.read_sql_query(query, self.engine)
+
+                # For loop to retrieve macro statistics and calculate percent change
+                for j in range(n):
+                    # This will grab the n+1 statistic to use to calculate the percent change to the n statistic
+                    temp = data.tail(n + 1)
+                    # This will grab the most recent n statistics from the query, as we are working only with n points
+                    data = data.tail(n)
+
+                    # For the first iteration we need to use the n+1th statistic to calculate percent change on the oldest point
+                    if j == 0:
+                        macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
+                        vars[i].append(macrov)
+                    else:
+                        macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j - 1]) / \
+                                 data['statistics'].iloc[j - 1]
+                        vars[i].append(macrov)
+
+        # We now iterate through the instrument ids
+        for x in ikeys:
+
+            # This query will grab the quarterly instrument statistics from 2014 to now
+            query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
+                    "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
+                    "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2014-03-21' AND {} ) z " \
+                    "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
+                    "MONTH(z.date) = 12)".format(3, currentDate)
+
+            # Then we execute the query and store the returned values in instrumentStats, and grab the last n stats from the dataframe as we are only using n datapoints
+            instrumentStats = pd.read_sql_query(query, self.engine)
+            instrumentStats = instrumentStats.tail(n)
+
+            # Temp result will then store the resulting forecast prices throughout the calculation of n datapoints
+            temp_result = []
+
+            # isFirst will determine whether or not this is the first calculation being done
+            # If it is true then we use the most recent instrument statistic to forecast the first pricepoint
+            # IF it is false then we use the previous forecast price to predict the next forecast price
+            isFirst = True
+            # This for loop is where the actual calculation takes place
+            for i in range(n):
+                if isFirst:
+                    stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['Unemployment Rate'][i] * weightings[ikeys[x]][1] + vars['Inflation Rate'][i] * weightings[ikeys[x]][2]) - (vars['Misery Index'][i] * vars['Misery Index'][i])
+                    stat = (stat * instrumentStats['close'].iloc[n-1]) + instrumentStats['close'].iloc[n-1]
+                    temp_result.append(stat)
+                    temp_price = stat
+                    isFirst = False
+                else:
+                    stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['Unemployment Rate'][i] * weightings[ikeys[x]][1] + vars['Inflation Rate'][i] *
+                                weightings[ikeys[x]][2]) - (vars['Misery Index'][i] * vars['Misery Index'][i])
+                    stat = (stat * temp_price) + temp_price
+                    temp_result.append(stat)
+                    temp_price = stat
+
+
+
+            # We then append the resulting forcasted prices over n quarters to result, a dictionary where each
+            # Instrument ID is mapped to n forecast prices
+            result[ikeys[x]].append(temp_result)
+
+        #Table will represent a temporary table with the data appended matching the columns of the macroeconalgorithmforecast database table
+        table = []
+
+        #This forloop will populate table[] with the correct values according to the database structure
+        for i, k in result.items():
+            cnt = 0
+            for j in k:
+                for l in range(n):
+                    table.append([date[cnt], i, 'ALL', j[cnt], 'MSF2 Past Dates', 0])
+                    cnt += 1
+
+        #Once table is populated we then push it into the macroeconalgorithmforecast table
+        table = pd.DataFrame(table, columns=['forecastdate','instrumentid' , 'macroeconcode',
+                                            'forecastprice', 'algorithmcode', 'prederror'])
+        table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('append'), index=False)
+
+
     # Calculation function used in MSF1
     def calc(self, df1, df2, n):
         G = 0
-        #S = 0
-        # Calculates average Macro Variable % change and S&P closing prices over past n days
+
+        # Calculates average Macro Variable % change over past n days
         for i in range(n):
             G = df1['statistics'][i] + G
-            #S = df2['close'][i] + S
 
         G = G / n
-        #S = S / n
         G = G / 100
         return G
 

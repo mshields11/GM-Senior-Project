@@ -44,7 +44,7 @@ class DataFetch:
 
         start = datetime.now()-timedelta(days=self.datalength)  # get date value from 3 years ago
         end = now.strftime("%Y-%m-%d")
-
+        print(self.datasource)
         # Cycle through each ticker symbol
         for n in range(len(sources)):
             # data will be a 2D Pandas Dataframe

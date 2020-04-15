@@ -29,11 +29,14 @@ master_data.get_data(ticker_symbols)
 # get date data and store in DateDim, replaced the SQL calendar code
 master_data.get_calendar()
 
+
 #Macro Economic Variable Functions
+FinsterTab.F2019.AccuracyTest.get_past_data(db_engine)
 DataFetch.macroFetch(db_engine)
 DataForecast.MSF1(db_engine)
 DataForecast.MSF2(db_engine)
 DataForecast.MSF3(db_engine)
+DataForecast.MSF2_Past_Date(db_engine)
 
 
 
@@ -43,6 +46,10 @@ indicators.calculate()
 
 # Get Raw Data from database to calculate forecasts
 forecast = DataForecast(db_engine, instrument_master)
+
+# Polynomial Regression Function
+# Takes a while to run, comment out if need be
+forecast.calculate_regression()
 
 # calculate and store price predictions
 forecast.calculate_forecast()

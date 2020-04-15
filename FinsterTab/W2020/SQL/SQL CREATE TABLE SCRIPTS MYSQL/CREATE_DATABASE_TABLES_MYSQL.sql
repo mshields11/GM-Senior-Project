@@ -180,3 +180,23 @@ forecastprice           float null,
 algorithmcode           varchar(50) null,
 prederror               float null
 );
+
+DROP TABLE IF EXISTS dbo_tempvisualize;
+CREATE TABLE dbo_tempvisualize(
+	forecastdate	date null,
+    instrumentid	int null,
+    forecastcloseprice	float null,
+    algorithmcode	varchar(50) null
+);
+
+DROP TABLE IF EXISTS dbo_paststatistics;
+create table dbo_paststatistics(        
+date                    date null,   
+high                    float null,
+low                     float null,
+`open`                  float null,
+`close`                 float null,
+volume                  float null,
+`adj close`             float null,
+instrumentid            int null
+)

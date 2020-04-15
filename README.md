@@ -41,6 +41,7 @@ Michael Shields | Nabeel Asghar | Shojib Miah | Michael Chen  | CSC4996 | April 
 	-DBEngine
 	-quandl
 	-fredapi
+	-pytest
 
 11. Run DataMain.py in PyCharm
 
