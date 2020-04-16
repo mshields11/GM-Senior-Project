@@ -1,7 +1,7 @@
 from sqlalchemy import true
-import FinsterTab.F2019.DataForecast
+import FinsterTab.W2020.DataForecast
 import datetime as dt
-from FinsterTab.F2019.dbEngine import DBEngine
+from FinsterTab.W2020.dbEngine import DBEngine
 import pandas as pd
 import sqlalchemy as sal
 import numpy

@@ -10,7 +10,7 @@ import xgboost as xgb
 import calendar
 import datetime as dt
 from datetime import timedelta, datetime
-import FinsterTab.F2019.AccuracyTest
+import FinsterTab.W2020.AccuracyTest
 import sqlalchemy as sal
 from sklearn.model_selection import train_test_split    # not used at this time
 from sklearn.linear_model import LinearRegression
@@ -889,7 +889,7 @@ class DataForecast:
         year = currentDate.year
 
         #Prints out the accuracy figures, not necessary can be commented out
-        FinsterTab.F2019.AccuracyTest.MSF1_accuracy(self.engine)
+        FinsterTab.W2020.AccuracyTest.MSF1_accuracy(self.engine)
 
         # Setup a for loop to loop through and append the date list with the date of the start of the next quarter
         # For loop will run n times, corresponding to amount of data points we are working with
@@ -1072,7 +1072,7 @@ class DataForecast:
 
         # Weightings are determined through a function written in accuracytest.py
         # The weightings returned are used in the calculation below
-        weightings = FinsterTab.F2019.AccuracyTest.create_weightings_MSF2(self.engine, setWeightings)
+        weightings = FinsterTab.W2020.AccuracyTest.create_weightings_MSF2(self.engine, setWeightings)
 
         n = 8
 
@@ -1253,7 +1253,7 @@ class DataForecast:
 
         # Weightings are determined through a function written in accuracytest.py
         # The weightings returned are used in the calculation below
-        weightings = FinsterTab.F2019.AccuracyTest.create_weightings_MSF3(self.engine, setWeightings)
+        weightings = FinsterTab.W2020.AccuracyTest.create_weightings_MSF3(self.engine, setWeightings)
 
 
         n = 8
@@ -1432,7 +1432,7 @@ class DataForecast:
 
         # Weightings are determined through a function written in accuracytest.py
         # The weightings returned are used in the calculation below
-        weightings = FinsterTab.F2019.AccuracyTest.create_weightings_MSF2_Past_Dates(self.engine)
+        weightings = FinsterTab.W2020.AccuracyTest.create_weightings_MSF2_Past_Dates(self.engine)
 
         n = 8
 

@@ -1,11 +1,11 @@
 # Load other local Python modules to be used in this MAIN module
-from FinsterTab.F2019.DataFetch import DataFetch
-from FinsterTab.F2019.DataForecast import DataForecast
-from FinsterTab.F2019.dbEngine import DBEngine
-from FinsterTab.F2019.BuySell import BuySell
-from FinsterTab.F2019.EngineeredFeatures import EngineeredFeatures
-from FinsterTab.F2019.TradingSimulator import TradingSimulator
-import FinsterTab.F2019.AccuracyTest
+from FinsterTab.W2020.DataFetch import DataFetch
+from FinsterTab.W2020.DataForecast import DataForecast
+from FinsterTab.W2020.dbEngine import DBEngine
+from FinsterTab.W2020.BuySell import BuySell
+from FinsterTab.W2020.EngineeredFeatures import EngineeredFeatures
+from FinsterTab.W2020.TradingSimulator import TradingSimulator
+import FinsterTab.W2020.AccuracyTest
 
 
 
@@ -31,7 +31,7 @@ master_data.get_calendar()
 
 
 #Macro Economic Variable Functions
-FinsterTab.F2019.AccuracyTest.get_past_data(db_engine)
+FinsterTab.W2020.AccuracyTest.get_past_data(db_engine)
 DataFetch.macroFetch(db_engine)
 DataForecast.MSF1(db_engine)
 DataForecast.MSF2(db_engine)
