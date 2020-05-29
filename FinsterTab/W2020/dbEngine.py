@@ -1,5 +1,6 @@
 # import libraries to be used in this code module
 import sqlalchemy as sal   # library to handle SQL database related operations
+import pymysql
 from pymysql import converters
 import numpy as np
 
